@@ -11,7 +11,16 @@
 --  * Invoice "overdue" is computed (see view invoice_balances), not stored.
 -- =====================================================================
 
--- ---------------------------------------------------------------- Enums
+-- Reset: uncomment to wipe the public schema before rebuilding.
+-- WARNING: deletes all tables and data in public.
+/*
+DROP SCHEMA IF EXISTS public CASCADE;
+CREATE SCHEMA public;
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON SCHEMA public TO postgres, service_role;
+*/
+
+------------------------------------------------------------------- Enums
 CREATE TYPE user_role            AS ENUM ('ADMIN', 'STUDENT');
 CREATE TYPE session_status       AS ENUM ('SCHEDULED', 'COMPLETED', 'CANCELLED');
 CREATE TYPE grading_type         AS ENUM ('MASS', 'PRIVATE');
@@ -460,10 +469,10 @@ END $$;
 ALTER VIEW invoice_balances SET (security_invoker = true);
 
 -- ---------------------------------------------------------------- Sample logins (dev/demo only)
--- Admin:   admin@aikidoshinjukai.com / Admin@12345
+-- Admin:   admin@as.com / Admin@12345
 -- Student: student@gmail.com / Student@12345
 INSERT INTO users (email, password_hash, role) VALUES
-  ('admin@aikidoshinjukai.com', '$2b$10$9P7ACqG/VJL/EnnkxDyiTef5MbnbUsztsbVu.FVh9FqJQATsxO.rq', 'ADMIN'),
+  ('admin@as.com', '$2b$10$9P7ACqG/VJL/EnnkxDyiTef5MbnbUsztsbVu.FVh9FqJQATsxO.rq', 'ADMIN'),
   ('student@gmail.com', '$2b$10$yJtCumAe7ca0U8vk/jZk4u.kZHBkrvCBMd5SXcOJNp42fNIi3lCFG', 'STUDENT')
 ON CONFLICT (email) DO UPDATE
   SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, is_active = true;

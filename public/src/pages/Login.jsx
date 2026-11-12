@@ -128,7 +128,7 @@ export default function Login() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={role === 'ADMIN' ? 'admin@aikidoshinjukai.com' : 'student@gmail.com'}
+                placeholder={role === 'ADMIN' ? 'admin@as.com' : 'student@gmail.com'}
                 className={inputClass}
               />
             </Field>
