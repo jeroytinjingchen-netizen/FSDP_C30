@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+/* Layer 1: font stacks */
+@theme {
+  --font-sans: 'Fira Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Layer 2: semantic tokens, switched per theme */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --muted: #f1f5f9;
+  --muted-foreground: #475569;
+  --border: #e2e8f0;
+  --input-border: #64748b;
+  --ring: #0f172a;
+
+  --accent: #b91c1c;
+  --accent-hover: #991b1b;
+  --on-accent: #ffffff;
+  --accent-soft: #fee2e2;
+  --accent-text: #991b1b;
+
+  --destructive: #b91c1c;
+  --destructive-soft: #fee2e2;
+  --destructive-solid: #b91c1c;
+  --on-destructive: #ffffff;
+
+  --warning: #92400e;
+  --warning-soft: #fef3c7;
+
+  --sidebar: #991b1b;
+  --sidebar-foreground: #fecaca;
+  --sidebar-active: rgba(255, 255, 255, 0.15);
+  --scrim: rgba(127, 29, 29, 0.55);
+}
+
+/* Layer 3: expose semantic tokens as Tailwind utilities (bg-card, text-muted-foreground, ...) */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input-border);
+  --color-ring: var(--ring);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-text: var(--accent-text);
+  --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-solid: var(--destructive-solid);
+  --color-on-destructive: var(--on-destructive);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-scrim: var(--scrim);
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  button:not(:disabled),
+  select {
+    cursor: pointer;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-dialog-in {
+  animation: dialog-in 200ms ease-out;
+}
+.animate-fade-in {
+  animation: fade-in 200ms ease-out;
+}
+.animate-toast-in {
+  animation: toast-in 250ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
