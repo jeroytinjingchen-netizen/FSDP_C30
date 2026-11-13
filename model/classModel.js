@@ -207,8 +207,41 @@ async function findConflicts(sessionId, instructorIds, venueId, startsAt, endsAt
   return rows;
 }
 
+// One query for every session in the centre filter, instead of one findConflicts call per session.
+// Matches findConflicts: other sessions must be non-cancelled, overlap in time, and share an instructor or venue.
+async function findAllConflicts({ centreId }) {
+  const { rows } = await pool.query(
+    `WITH sess AS (
+       SELECT s.id, s.venue_id, s.starts_at, s.ends_at, ct.name AS template_name
+         FROM class_sessions s
+         JOIN class_templates ct ON ct.id = s.template_id
+         JOIN terms t            ON t.id = ct.term_id
+        WHERE ($1::uuid IS NULL OR t.centre_id = $1)
+     )
+     SELECT 'INSTRUCTOR' AS kind, i.name AS subject, a.id AS session_id, a.template_name,
+            b.id AS other_session_id, b.starts_at, b.ends_at
+       FROM sess a
+       JOIN class_session_instructors ca ON ca.session_id = a.id
+       JOIN class_session_instructors cb ON cb.instructor_id = ca.instructor_id
+       JOIN class_sessions b             ON b.id = cb.session_id
+       JOIN instructors i                ON i.id = ca.instructor_id
+      WHERE b.id <> a.id AND b.status <> 'CANCELLED'
+        AND b.starts_at < a.ends_at AND b.ends_at > a.starts_at
+     UNION ALL
+     SELECT 'VENUE', v.name, a.id, a.template_name, b.id, b.starts_at, b.ends_at
+       FROM sess a
+       JOIN class_sessions b ON b.venue_id = a.venue_id
+       JOIN venues v         ON v.id = a.venue_id
+      WHERE b.id <> a.id AND b.status <> 'CANCELLED'
+        AND b.starts_at < a.ends_at AND b.ends_at > a.starts_at`,
+    [centreId]
+  );
+  return rows;
+}
+
 module.exports = {
   listTemplates,
+  findAllConflicts,
   findTemplate,
   createTemplate,
   updateTemplate,

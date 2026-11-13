@@ -141,13 +141,7 @@ async function patchSession(req, res) {
 // Read-only conflict check for a whole term, for the timetable warning panel (AS-13).
 async function checkConflicts(req, res) {
   try {
-    const sessions = await Class.listSessions({ centreId: req.centreId, from: null, to: null });
-    const conflicts = [];
-    for (const s of sessions) {
-      const ids = s.instructors.map((i) => i.id);
-      const found = await Class.findConflicts(s.id, ids, s.venue_id, s.starts_at, s.ends_at);
-      for (const c of found) conflicts.push({ session_id: s.id, template_name: s.template_name, ...c });
-    }
+    const conflicts = await Class.findAllConflicts({ centreId: req.centreId });
     res.json({ count: conflicts.length, conflicts });
   } catch (err) {
     console.error(err);
