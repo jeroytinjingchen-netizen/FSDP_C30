@@ -14,7 +14,7 @@
                 },
     "repository":  {
                        "type":  "git",
-                       "url":  "git+https://github.com/kaden12333/FSDP_C30.git"
+                       "url":  "git+https://github.com/jeroytinjingchen-netizen/FSDP_C30.git"
                    },
     "keywords":  [
 
@@ -23,9 +23,9 @@
     "license":  "ISC",
     "type":  "commonjs",
     "bugs":  {
-                 "url":  "https://github.com/kaden12333/FSDP_C30/issues"
+                 "url":  "https://github.com/jeroytinjingchen-netizen/FSDP_C30/issues"
              },
-    "homepage":  "https://github.com/kaden12333/FSDP_C30#readme",
+    "homepage":  "https://github.com/jeroytinjingchen-netizen/FSDP_C30#readme",
     "dependencies":  {
                          "bcrypt":  "^6.0.0",
                          "dotenv":  "^18.0.9",
