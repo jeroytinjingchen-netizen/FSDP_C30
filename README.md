@@ -42,7 +42,7 @@ Centralised administrative system for Aikido Shinjukai centres. It covers studen
 
 ## Demo logins
 
-- Admin: `admin@aikidoshinjukai.com` / `Admin@12345`
+- Admin: `admin@as.com` / `Admin@12345`
 - Student: `student@gmail.com` / `Student@12345`
 
 ## Stripe webhook (local)

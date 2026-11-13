@@ -9,7 +9,7 @@
                     "client:install":  "npm --prefix public install",
                     "client:dev":  "npm --prefix public run dev",
                     "client:build":  "npm --prefix public run build",
-                    "dev":  "concurrently \"npm run appStart\" \"npm run client:dev\"",
+                    "dev":  "concurrently \"npm run appStart\" \"npm run client:dev\" \"stripe listen --forward-to localhost:3000/api/billing/webhook --all-snapshot\"",
                     "test":  "node --test tests/*.test.js"
                 },
     "repository":  {
