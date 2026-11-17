@@ -1,6 +1,8 @@
 // controllers/classController.js - templates, sessions, instructor assignment and conflicts (AS-11, AS-12, AS-13)
 const Joi = require('joi');
 const Class = require('../model/classModel');
+const Instructor = require('../model/instructorModel');
+const { findUnavailable, findUnavailableForTemplate } = require('../services/availability');
 
 const uuid = () => Joi.string().guid({ version: 'uuidv4' });
 
@@ -22,6 +24,12 @@ const sessionPatchSchema = Joi.object({
   instructor_ids: Joi.array().items(uuid()),
 }).min(1);
 
+// 409 body for an availability problem, shared by the template and session handlers.
+function notAvailable(res, unavailable) {
+  const names = unavailable.map((u) => u.name).join(', ');
+  return res.status(409).json({ error: `Not available at this time: ${names}.`, unavailable });
+}
+
 async function listTemplates(req, res) {
   try {
     res.json(await Class.listTemplates(req.query.termId || null));
@@ -35,6 +43,8 @@ async function createTemplate(req, res) {
   const { error, value } = templateSchema.validate(req.body);
   if (error) return res.status(400).json({ error: error.message });
   try {
+    const unavailable = await findUnavailableForTemplate(value.instructor_ids, value.weekday, value.start_minute, value.end_minute, Instructor);
+    if (unavailable.length) return notAvailable(res, unavailable);
     res.status(201).json(await Class.createTemplate(value));
   } catch (err) {
     if (err.code === '23503') return res.status(400).json({ error: 'Term, venue or rank not found.' });
@@ -47,6 +57,8 @@ async function updateTemplate(req, res) {
   const { error, value } = templateSchema.validate(req.body);
   if (error) return res.status(400).json({ error: error.message });
   try {
+    const unavailable = await findUnavailableForTemplate(value.instructor_ids, value.weekday, value.start_minute, value.end_minute, Instructor);
+    if (unavailable.length) return notAvailable(res, unavailable);
     const updated = await Class.updateTemplate(req.params.id, value);
     if (!updated) return res.status(404).json({ error: 'Class template not found.' });
     res.json(updated);
@@ -97,7 +109,8 @@ async function listSessions(req, res) {
   }
 }
 
-// Returns the session with conflicts (if any) so the admin can see them before the save is accepted.
+// Checks everything first and only then writes, so a rejected change never leaves a session half-updated.
+// Returns 409 for double-booking (venue or instructor) and for instructors outside their availability.
 async function patchSession(req, res) {
   const { error, value } = sessionPatchSchema.validate(req.body);
   if (error) return res.status(400).json({ error: error.message });
@@ -105,23 +118,21 @@ async function patchSession(req, res) {
     const session = await Class.findSession(req.params.id);
     if (!session) return res.status(404).json({ error: 'Session not found.' });
 
-    if (value.instructor_ids) {
-      const instructorIds = value.instructor_ids;
-      const venueId = value.venue_id || session.venue_id;
+    const instructorIds = value.instructor_ids || session.instructors.map((i) => i.id);
+    const venueId = value.venue_id || session.venue_id;
+
+    if (value.instructor_ids || value.venue_id) {
       const conflicts = await Class.findConflicts(session.id, instructorIds, venueId, session.starts_at, session.ends_at);
-      if (conflicts.length) {
-        return res.status(409).json({ error: 'Scheduling conflict.', conflicts });
-      }
+      if (conflicts.length) return res.status(409).json({ error: 'Scheduling conflict.', conflicts });
+    }
+
+    if (value.instructor_ids) {
+      const unavailable = await findUnavailable(instructorIds, session.starts_at, session.ends_at, Instructor);
+      if (unavailable.length) return notAvailable(res, unavailable);
       await Class.setSessionInstructors(session.id, instructorIds);
     }
 
     if (value.venue_id || value.status || value.note !== undefined) {
-      const venueId = value.venue_id || session.venue_id;
-      if (value.venue_id) {
-        const instructorIds = session.instructors.map((i) => i.id);
-        const conflicts = await Class.findConflicts(session.id, instructorIds, venueId, session.starts_at, session.ends_at);
-        if (conflicts.length) return res.status(409).json({ error: 'Scheduling conflict.', conflicts });
-      }
       await Class.updateSessionFields(session.id, {
         venue_id: venueId,
         status: value.status || null,
