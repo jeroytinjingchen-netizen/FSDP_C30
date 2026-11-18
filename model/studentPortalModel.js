@@ -1,44 +1,124 @@
-// model/studentPortalModel.js - read-only student records (belt and timetable).
+// model/studentPortalModel.js - SQL for the minimal student portal:
+// current rank, the packages on sale, the student's own package, and attendance.
+// A "model" file holds the SQL. Controllers call these functions and never write SQL themselves.
+
+// Shared connection pool. pool.query(sql, values) runs one query and returns { rows }.
 const pool = require('../dbConfig');
 
-async function getBelt(studentId) {
+// Returns the student's current rank (name, colour, order, and the date it was awarded).
+// JOIN ranks adds the rank row that current_rank_id points to.
+async function getRank(studentId) {
   const { rows } = await pool.query(
     `SELECT r.name, r.colour, r.rank_order, s.rank_since
-     FROM students s
-     JOIN ranks r ON r.id = s.current_rank_id
-     WHERE s.id = $1`,
+       FROM students s
+       JOIN ranks r ON r.id = s.current_rank_id
+      WHERE s.id = $1`,
     [studentId]
   );
   return rows[0] || null;
 }
 
-async function updateContact(studentId, { phone, guardian_name, guardian_phone }) {
+// Lists the packages a student can buy. Packages are a fixed list kept in the database.
+async function listPackages() {
   const { rows } = await pool.query(
-    `UPDATE students
-        SET phone = $2, guardian_name = $3, guardian_phone = $4, updated_at = now()
-      WHERE id = $1
-      RETURNING phone, guardian_name, guardian_phone`,
-    [studentId, phone || null, guardian_name || null, guardian_phone || null]
-  );
-  return rows[0] || null;
-}
-
-async function listUpcomingSessions(centreId, days = 14) {
-  const { rows } = await pool.query(
-    `SELECT cs.id, cs.starts_at, cs.ends_at, cs.status, cs.note,
-            ct.name AS class_name, v.name AS venue_name
-     FROM class_sessions cs
-     JOIN class_templates ct ON ct.id = cs.template_id
-     JOIN venues v ON v.id = cs.venue_id
-     WHERE v.centre_id = $1
-       AND cs.starts_at >= now()
-       AND cs.starts_at < now() + make_interval(days => $2::int)
-       AND cs.status <> 'CANCELLED'
-     ORDER BY cs.starts_at
-     LIMIT 100`,
-    [centreId, days]
+    `SELECT id, name, sessions_total, validity_weeks, price_cents, currency
+       FROM packages
+      WHERE is_active
+      ORDER BY price_cents`
   );
   return rows;
 }
 
-module.exports = { getBelt, updateContact, listUpcomingSessions };
+// Finds one package that is on sale, or null.
+async function findPackage(packageId) {
+  const { rows } = await pool.query(
+    `SELECT id, name, sessions_total, validity_weeks, price_cents, currency
+       FROM packages
+      WHERE id = $1 AND is_active`,
+    [packageId]
+  );
+  return rows[0] || null;
+}
+
+// Returns the student's most recently bought package with sessions used and left.
+// sessions_used counts attendance rows. A package is "active" while it has not expired
+// and still has sessions left. The subquery in the SELECT list counts rows per package.
+async function getCurrentPackage(studentId) {
+  const { rows } = await pool.query(
+    `SELECT sp.id, sp.name, sp.sessions_total, sp.purchased_at, sp.expires_at,
+            u.used AS sessions_used,
+            GREATEST(sp.sessions_total - u.used, 0) AS sessions_remaining,
+            (sp.expires_at > now() AND u.used < sp.sessions_total) AS is_active
+       FROM student_packages sp
+       CROSS JOIN LATERAL (
+         SELECT count(*)::int AS used FROM attendance a WHERE a.student_package_id = sp.id
+       ) u
+      WHERE sp.student_id = $1
+      ORDER BY (sp.expires_at > now() AND u.used < sp.sessions_total) DESC, sp.purchased_at DESC
+      LIMIT 1`,
+    [studentId]
+  );
+  return rows[0] || null;
+}
+
+// Records one attendance for today (Singapore date), which uses up one session.
+// It runs in a transaction so two quick clicks cannot use more sessions than the package has.
+// Returns { attendance } on success, or { error } with one of:
+//   NO_ACTIVE_PACKAGE  the student has no unexpired package with sessions left
+//   ALREADY_RECORDED   an attendance was already recorded today
+async function recordAttendance(studentId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // FOR UPDATE locks the chosen package row until COMMIT, so concurrent requests queue up.
+    const { rows } = await client.query(
+      `SELECT sp.id, sp.sessions_total
+         FROM student_packages sp
+        WHERE sp.student_id = $1 AND sp.expires_at > now()
+        ORDER BY sp.expires_at
+        FOR UPDATE`,
+      [studentId]
+    );
+
+    let chosen = null;
+    for (const pkg of rows) {
+      const used = await client.query(
+        'SELECT count(*)::int AS used FROM attendance WHERE student_package_id = $1',
+        [pkg.id]
+      );
+      if (used.rows[0].used < pkg.sessions_total) {
+        chosen = pkg;
+        break;
+      }
+    }
+    if (!chosen) {
+      await client.query('ROLLBACK');
+      return { error: 'NO_ACTIVE_PACKAGE' };
+    }
+
+    // UNIQUE (student_id, attended_on) allows one attendance per day. ON CONFLICT DO NOTHING
+    // turns a second attempt into "no row inserted" instead of an error.
+    const inserted = await client.query(
+      `INSERT INTO attendance (student_id, student_package_id)
+       VALUES ($1, $2)
+       ON CONFLICT (student_id, attended_on) DO NOTHING
+       RETURNING id, attended_at`,
+      [studentId, chosen.id]
+    );
+    if (inserted.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return { error: 'ALREADY_RECORDED' };
+    }
+
+    await client.query('COMMIT');
+    return { attendance: inserted.rows[0] };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { getRank, listPackages, findPackage, getCurrentPackage, recordAttendance };

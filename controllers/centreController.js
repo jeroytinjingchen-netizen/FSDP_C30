@@ -1,7 +1,11 @@
-// controllers/centreController.js
+﻿// controllers/centreController.js - HTTP handlers for centres (AS-3).
+//
+// A controller reads the request (req), validates it, calls the model, then writes the response (res).
+// Joi is a validation library: schema.validate(data) returns { error, value }.
 const Joi = require('joi');
 const Centre = require('../model/centreModel');
 
+// Rules for the centre form. trim() strips spaces, allow('', null) lets optional fields be blank.
 const schema = Joi.object({
   name: Joi.string().trim().min(1).max(150).required(),
   address: Joi.string().trim().min(1).max(300).required(),
@@ -9,7 +13,7 @@ const schema = Joi.object({
   phone: Joi.string().trim().max(30).allow('', null),
 });
 
-// List (archived hidden unless ?includeArchived=true)
+// GET /api/centres - archived centres are hidden unless ?includeArchived=true
 async function list(req, res) {
   try {
     res.json(await Centre.list(req.query.includeArchived === 'true'));
@@ -19,6 +23,8 @@ async function list(req, res) {
   }
 }
 
+// POST /api/centres
+// Postgres error 23505 = unique violation (the name is already used).
 async function create(req, res) {
   const { error, value } = schema.validate(req.body);
   if (error) return res.status(400).json({ error: error.message });
@@ -31,6 +37,8 @@ async function create(req, res) {
   }
 }
 
+// PUT /api/centres/:id
+// Postgres error 22P02 = the id in the URL is not a valid UUID, so treat it as not found.
 async function update(req, res) {
   const { error, value } = schema.validate(req.body);
   if (error) return res.status(400).json({ error: error.message });
@@ -46,6 +54,8 @@ async function update(req, res) {
   }
 }
 
+// Factory: returns a handler that archives (false) or restores (true) a centre.
+// A function that returns a function lets one body serve both routes.
 function setActive(isActive) {
   return async (req, res) => {
     try {
@@ -60,7 +70,7 @@ function setActive(isActive) {
   };
 }
 
-// Hard delete: blocked while the centre has any students (archive instead)
+// DELETE /api/centres/:id - hard delete, blocked while the centre has any students (archive instead)
 async function remove(req, res) {
   try {
     const students = await Centre.countStudents(req.params.id);
@@ -90,3 +100,4 @@ module.exports = {
   archive: setActive(false),
   restore: setActive(true),
 };
+

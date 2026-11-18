@@ -1,10 +1,15 @@
+// middlewares/admin.js - guards for admin routes and the shared centre filter.
 // middlewares/admin.js
+// Data access for users.
 const User = require('../model/userModel');
 const { getSessionUserId } = require('./session');
 
+// Matches the format of a database id (UUID) so a malformed value never reaches the database.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Reads the signed session cookie and verifies the user is an active ADMIN.
+// requireAdmin: middleware (req, res, next) run before every admin route.
+// 401 = not logged in, 403 = logged in but not an admin. On success req.adminId is set and next() continues.
 async function requireAdmin(req, res, next) {
   try {
     const id = getSessionUserId(req);
@@ -23,6 +28,7 @@ async function requireAdmin(req, res, next) {
 
 // Reads ?centreId= (blank/"all" = all centres). Use req.centreId in any list/dashboard query:
 //   WHERE ($1::uuid IS NULL OR centre_id = $1)
+// centreFilter: turns the ?centreId= query value into req.centreId (null means all centres).
 function centreFilter(req, res, next) {
   const raw = req.query.centreId;
   if (!raw || raw === 'all') {

@@ -1,29 +1,27 @@
+// AdminLayout.jsx - the admin shell: sidebar on large screens, a slide-out menu on phones.
 import { useEffect, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
 import { CentreProvider } from '../CentreContext.jsx';
-import CentreSwitcher from './CentreSwitcher.jsx';
-import { BuildingIcon, CalendarIcon, CheckCircleIcon, LogOutIcon, LogoMark, MapPinIcon, MenuIcon, XIcon } from './Icons.jsx';
+import { BuildingIcon, CalendarIcon, CheckCircleIcon, LogOutIcon, MapPinIcon, MenuIcon, XIcon } from './Icons.jsx';
 import { cn } from './ui.jsx';
 
+// Sidebar links. 'icon' is a component from Icons.jsx drawn next to the label.
 const NAV = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: CheckCircleIcon },
-  { to: '/admin/reports', label: 'Reports', icon: CalendarIcon },
   { to: '/admin/centres', label: 'Centres', icon: BuildingIcon },
-  { to: '/admin/venues', label: 'Venues', icon: MapPinIcon },
-  { to: '/admin/terms', label: 'Terms', icon: CalendarIcon },
-  { to: '/admin/instructors', label: 'Instructors', icon: MapPinIcon },
   { to: '/admin/classes', label: 'Classes', icon: CalendarIcon },
+  { to: '/admin/instructors', label: 'Instructors', icon: MapPinIcon },
+  { to: '/admin/students', label: 'Students', icon: CheckCircleIcon },
   { to: '/admin/grading', label: 'Grading', icon: CheckCircleIcon },
   { to: '/admin/payments', label: 'Payments', icon: CheckCircleIcon },
 ];
 
+// Brand: the logo and name at the top of the sidebar.
 function Brand() {
   return (
     <div className="flex items-center gap-3">
-      <span className="flex size-9 items-center justify-center rounded-lg bg-accent text-on-accent">
-        <LogoMark size={22} />
-      </span>
+      <img src="/aikido-shinjukai-logo.png" alt="Aikido Shinjukai logo" className="size-9 rounded-lg object-cover" />
       <div className="leading-tight">
         <p className="font-semibold text-white">Aikido Shinjukai</p>
         <p className="text-xs text-sidebar-foreground">Admin console</p>
@@ -32,6 +30,7 @@ function Brand() {
   );
 }
 
+// SidebarContent: the menu (NavLink highlights the current page) and the Log out button.
 function SidebarContent({ onLogout, onNavigate }) {
   return (
     <div className="flex h-full flex-col gap-6 p-4">
@@ -59,12 +58,6 @@ function SidebarContent({ onLogout, onNavigate }) {
       </nav>
 
       <div className="mt-auto flex flex-col gap-4">
-        <div>
-          <label htmlFor="centre-switcher" className="mb-1.5 block text-xs font-medium text-sidebar-foreground">
-            Centre
-          </label>
-          <CentreSwitcher />
-        </div>
         <div className="flex items-center gap-2 border-t border-white/10 pt-4">
           <button
             type="button"
@@ -80,6 +73,8 @@ function SidebarContent({ onLogout, onNavigate }) {
   );
 }
 
+// AdminLayout: the frame around every admin page. Logged-out users and students are sent to the login page.
+// <Outlet /> is where the current page (Dashboard, Centres, ...) is drawn.
 export default function AdminLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -87,12 +82,14 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (!open) return;
+    // While the mobile menu is open, Escape closes it. The cleanup function removes the listener.
     const onKey = (e) => e.key === 'Escape' && setOpen(false);
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [open]);
 
   useEffect(() => {
+    // Close the mobile menu whenever the page changes.
     setOpen(false);
   }, [location.pathname]);
 
@@ -143,3 +140,4 @@ export default function AdminLayout() {
     </CentreProvider>
   );
 }
+

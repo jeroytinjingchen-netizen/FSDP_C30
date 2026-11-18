@@ -1,5 +1,8 @@
+﻿// api.js - helpers for talking to the backend and remembering the logged-in user in the browser.
 const USER_KEY = 'user';
 
+// localStorage keeps small text values in the browser between visits. Only the user's display details are
+// kept here; the real login is the HTTP-only session cookie.
 export function getStoredUser() {
   try {
     return JSON.parse(localStorage.getItem(USER_KEY) || 'null');
@@ -16,7 +19,8 @@ export function clearUser() {
   localStorage.removeItem(USER_KEY);
 }
 
-// Auth is an HTTP-only session cookie set by the server, so requests send it automatically.
+// api(url, options) wraps fetch(): it sends JSON, includes the session cookie, and throws an Error with the
+// server's message when the response is not OK. Pages call it with await inside try/catch.
 export async function api(url, options = {}) {
   const res = await fetch(url, {
     ...options,
@@ -30,3 +34,4 @@ export async function api(url, options = {}) {
   if (!res.ok) throw new Error(data.error || 'Request failed.');
   return data;
 }
+

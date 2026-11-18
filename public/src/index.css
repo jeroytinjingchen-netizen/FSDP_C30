@@ -36,7 +36,11 @@
   --sidebar: #991b1b;
   --sidebar-foreground: #fecaca;
   --sidebar-active: rgba(255, 255, 255, 0.15);
-  --scrim: rgba(127, 29, 29, 0.55);
+  --scrim: rgba(64, 64, 64, 0.55);
+  --ascii-accent: var(--accent);
+  --ascii-skeleton: var(--muted-foreground);
+  --ascii-font: var(--font-mono);
+  --ascii-surface: var(--card);
 }
 
 /* Layer 3: expose semantic tokens as Tailwind utilities (bg-card, text-muted-foreground, ...) */

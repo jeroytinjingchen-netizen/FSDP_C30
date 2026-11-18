@@ -6,6 +6,7 @@
     "scripts":  {
                     "appStart":  "nodemon app.js",
                     "seed":  "node scripts/seed.js",
+                    "migrate":  "node scripts/migrate.js",
                     "client:install":  "npm --prefix public install",
                     "client:dev":  "npm --prefix public run dev",
                     "client:build":  "npm --prefix public run build",

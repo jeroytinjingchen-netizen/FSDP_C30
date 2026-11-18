@@ -1,3 +1,5 @@
+// Icons.jsx - the inline SVG icons used in the app.
+// baseProps: attributes shared by every icon. stroke "currentColor" makes an icon take the text colour around it.
 const baseProps = {
   viewBox: '0 0 24 24',
   fill: 'none',
@@ -9,6 +11,7 @@ const baseProps = {
   focusable: false,
 };
 
+// make(children) returns an icon component. size sets width and height; other props go to the <svg>.
 function make(children) {
   return function Icon({ size = 20, ...props }) {
     return (
@@ -19,6 +22,7 @@ function make(children) {
   };
 }
 
+// Each icon below is make(<svg shapes>). Paths use a 24x24 grid.
 export const PlusIcon = make(
   <>
     <path d="M5 12h14" />
