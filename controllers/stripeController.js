@@ -1,22 +1,13 @@
-// controllers/stripeController.js
-const { getStripe, createCheckoutForInvoice, handleStripeEvent } = require('../services/stripeService');
+// controllers/stripeController.js - the public Stripe webhook.
+const { getStripe, handleStripeEvent } = require('../services/stripeService');
 
-// Admin: creates a Checkout link for an invoice's outstanding balance.
-async function createCheckout(req, res, next) {
-  try {
-    const result = await createCheckoutForInvoice(req.params.id);
-    if (result.error === 'NOT_FOUND') return res.status(404).json({ error: 'Invoice not found.' });
-    if (result.error === 'NO_BALANCE') return res.status(400).json({ error: 'Invoice has no outstanding balance.' });
-    res.json({ url: result.url, sessionId: result.sessionId });
-  } catch (err) {
-    next(err);
-  }
-}
-
-// Public Stripe webhook. The body must be the raw Buffer so the signature can be checked.
+// POST /api/billing/webhook. Stripe calls this after a Checkout session ends.
+// The body must be the raw Buffer (not parsed JSON) so the signature can be checked.
+// The signature is the only protection, because Stripe has no admin session.
 async function webhook(req, res) {
   let event;
   try {
+    // constructEvent throws if the signature does not match STRIPE_WEBHOOK_SECRET.
     event = getStripe().webhooks.constructEvent(
       req.body,
       req.headers['stripe-signature'],
@@ -29,10 +20,10 @@ async function webhook(req, res) {
     const result = await handleStripeEvent(event);
     res.json({ received: true, result });
   } catch (err) {
-    // Non-2xx makes Stripe retry the event later.
+    // A non-2xx reply makes Stripe retry the event later.
     console.error('Stripe webhook processing failed:', err.message);
     res.status(500).json({ error: 'Webhook processing failed.' });
   }
 }
 
-module.exports = { createCheckout, webhook };
+module.exports = { webhook };

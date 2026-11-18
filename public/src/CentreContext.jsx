@@ -1,3 +1,4 @@
+﻿// CentreContext.jsx - shares the centre list and the selected centre (the 'All centres' switcher) with admin pages.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api } from './api.js';
 import { CENTRE_KEY } from './AuthContext.jsx';
@@ -47,3 +48,4 @@ export function CentreProvider({ children }) {
 }
 
 export const useCentre = () => useContext(CentreContext);
+

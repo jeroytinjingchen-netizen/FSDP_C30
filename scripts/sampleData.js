@@ -7,19 +7,45 @@ const TZ = '+08:00';
 const BISHAN = 'Shinjukai Bishan Centre';
 const JURONG = 'Shinjukai Jurong Centre';
 
+// Children's intermediate grades (Blue-Silver, Brown-Silver, Black-Silver) and Junior Dan are included.
+// rank_order is unique, so the seed first moves existing orders out of the way before upserting.
 const RANKS = [
-  { name: '6th Kyu', order: 1, colour: 'White' },
-  { name: '5th Kyu', order: 2, colour: 'Yellow' },
-  { name: '4th Kyu', order: 3, colour: 'Orange' },
-  { name: '3rd Kyu', order: 4, colour: 'Green' },
-  { name: '2nd Kyu', order: 5, colour: 'Blue' },
-  { name: '1st Kyu', order: 6, colour: 'Brown' },
-  { name: '1st Dan', order: 7, colour: 'Black' },
+  { name: '12th Kyu', order: 1, colour: 'Red' },
+  { name: '11th Kyu', order: 2, colour: 'Red-Gold' },
+  { name: '10th Kyu', order: 3, colour: 'Yellow' },
+  { name: '9th Kyu', order: 4, colour: 'Orange' },
+  { name: '8th Kyu', order: 5, colour: 'Green' },
+  { name: '7th Kyu', order: 6, colour: 'Purple' },
+  { name: '6th Kyu', order: 7, colour: 'Blue' },
+  { name: 'Blue-Silver', order: 8, colour: 'Blue-Silver' },
+  { name: '5th Kyu', order: 9, colour: 'Blue-Gold' },
+  { name: '4th Kyu', order: 10, colour: 'Brown' },
+  { name: 'Brown-Silver', order: 11, colour: 'Brown-Silver' },
+  { name: '3rd Kyu', order: 12, colour: 'Brown-Gold' },
+  { name: '2nd Kyu', order: 13, colour: 'Black' },
+  { name: 'Black-Silver', order: 14, colour: 'Black-Silver' },
+  { name: '1st Kyu', order: 15, colour: 'Black-Gold' },
+  { name: 'Junior Dan', order: 16, colour: 'Black' },
+  { name: '1st Dan', order: 17, colour: 'Black' },
+  { name: '2nd Dan', order: 18, colour: 'Black' },
+  { name: '3rd Dan', order: 19, colour: 'Black' },
+  { name: '4th Dan', order: 20, colour: 'Black' },
+  { name: '5th Dan', order: 21, colour: 'Black' },
+  { name: '6th Dan', order: 22, colour: 'Black' },
+  { name: '7th Dan', order: 23, colour: 'Black' },
 ];
 
 const CENTRES = [
   { name: BISHAN, address: '1 Bishan Street 10, Singapore', email: 'bishan@aikidoshinjukai.com', phone: '+65 6000 1001' },
   { name: JURONG, address: '2 Jurong East Street 21, Singapore', email: 'jurong@aikidoshinjukai.com', phone: '+65 6000 1002' },
+  { name: 'ASK Headquarters Dojo' },
+  { name: 'Marine Parade Dojo' },
+  { name: 'Rivervale Dojo' },
+  { name: 'Tampines West Dojo' },
+  { name: 'Thomson Dojo' },
+  { name: 'Bukit Timah Dojo' },
+  { name: 'SMU Dojo' },
+  { name: 'Siglap South Dojo' },
 ];
 
 const VENUES = {
@@ -28,6 +54,14 @@ const VENUES = {
     { name: 'Studio 2', capacity: 20 },
   ],
   [JURONG]: [{ name: 'Main Dojo', capacity: 35 }],
+  'ASK Headquarters Dojo': [{ name: 'Main Dojo', capacity: 30 }],
+  'Marine Parade Dojo': [{ name: 'Main Dojo', capacity: 30 }],
+  'Rivervale Dojo': [{ name: 'Main Dojo', capacity: 30 }],
+  'Tampines West Dojo': [{ name: 'Main Dojo', capacity: 30 }],
+  'Thomson Dojo': [{ name: 'Main Dojo', capacity: 30 }],
+  'Bukit Timah Dojo': [{ name: 'Main Dojo', capacity: 30 }],
+  'SMU Dojo': [{ name: 'Main Dojo', capacity: 30 }],
+  'Siglap South Dojo': [{ name: 'Main Dojo', capacity: 30 }],
 };
 
 // availability: [weekday, startMinute, endMinute]
@@ -57,10 +91,70 @@ const INSTRUCTORS = [
     name: 'Rahim Abdullah',
     email: 'rahim.abdullah@aikidoshinjukai.com',
     phone: '+65 9100 2003',
-    rank: '1st Kyu',
+    rank: '1st Dan',
     qualifications: 'Assistant instructor',
     centres: [JURONG],
     availability: [[2, 1140, 1260], [6, 600, 720]],
+    unavailable: [],
+  },
+  {
+    name: 'Kenji Sato',
+    email: 'kenji.sato@aikidoshinjukai.com',
+    phone: '+65 9100 2004',
+    rank: '1st Dan',
+    qualifications: 'Head instructor, ASK Headquarters',
+    centres: ['ASK Headquarters Dojo'],
+    availability: [[1, 1140, 1260], [3, 1140, 1260]],
+    unavailable: [],
+  },
+  {
+    name: 'Siti Aminah',
+    email: 'siti.aminah@aikidoshinjukai.com',
+    phone: '+65 9100 2005',
+    rank: '1st Dan',
+    qualifications: 'Instructor, beginners and teens',
+    centres: ['Marine Parade Dojo', 'Rivervale Dojo'],
+    availability: [[2, 1080, 1200], [5, 1080, 1200]],
+    unavailable: [],
+  },
+  {
+    name: 'Lucas Wong',
+    email: 'lucas.wong@aikidoshinjukai.com',
+    phone: '+65 9100 2006',
+    rank: '1st Dan',
+    qualifications: 'Assistant instructor, weekend classes',
+    centres: ['Tampines West Dojo'],
+    availability: [[6, 600, 720]],
+    unavailable: [],
+  },
+  {
+    name: 'Priya Nair',
+    email: 'priya.nair@aikidoshinjukai.com',
+    phone: '+65 9100 2007',
+    rank: '1st Dan',
+    qualifications: 'Instructor, adult classes',
+    centres: ['Thomson Dojo', 'Bukit Timah Dojo'],
+    availability: [[3, 1140, 1260], [6, 540, 660]],
+    unavailable: [],
+  },
+  {
+    name: 'Marcus Chua',
+    email: 'marcus.chua@aikidoshinjukai.com',
+    phone: '+65 9100 2008',
+    rank: '1st Dan',
+    qualifications: 'Assistant instructor, university club',
+    centres: ['SMU Dojo'],
+    availability: [[4, 1140, 1230]],
+    unavailable: [],
+  },
+  {
+    name: 'Hannah Lee',
+    email: 'hannah.lee@aikidoshinjukai.com',
+    phone: '+65 9100 2009',
+    rank: '1st Dan',
+    qualifications: 'Instructor, children and beginners',
+    centres: ['Siglap South Dojo'],
+    availability: [[2, 1140, 1260]],
     unavailable: [],
   },
 ];
@@ -81,7 +175,7 @@ const STUDENTS = [
   { first: 'Benjamin', last: 'Lim', email: 'ben.lim@example.com', centre: BISHAN, rank: '4th Kyu', phone: '+65 9123 4002', dob: '1995-07-02' },
   { first: 'Chloe', last: 'Ng', email: 'chloe.ng@example.com', centre: BISHAN, rank: '6th Kyu', phone: '+65 9123 4003', dob: '2001-11-30' },
   { first: 'Daniel', last: 'Ong', email: 'daniel.ong@example.com', centre: JURONG, rank: '3rd Kyu', phone: '+65 9123 4004', dob: '1988-03-14' },
-  { first: 'Eliza', last: 'Koh', email: 'eliza.koh@example.com', centre: JURONG, rank: '6th Kyu', phone: null, dob: '2015-09-09', guardian: 'Koh Hwee Ling', guardianPhone: '+65 9123 4200' },
+  { first: 'Eliza', last: 'Koh', email: 'eliza.koh@example.com', centre: JURONG, rank: '9th Kyu', phone: null, dob: '2015-09-09', guardian: 'Koh Hwee Ling', guardianPhone: '+65 9123 4200' },
   { first: 'Farid', last: 'Ismail', email: 'farid.ismail@example.com', centre: JURONG, rank: '2nd Kyu', phone: '+65 9123 4005', dob: '1992-01-21' },
 ];
 
@@ -145,6 +239,7 @@ function sessionTimestamp(dateStr, minute) {
 }
 
 async function seedSampleData(client) {
+  await client.query('UPDATE ranks SET rank_order = -1000 - rank_order');
   const rankId = {};
   for (const r of RANKS) {
     const { rows } = await client.query(
@@ -189,6 +284,7 @@ async function seedSampleData(client) {
        VALUES ($1, $2, $3, $4, $5) RETURNING id`,
       [i.name, i.email, i.phone, rankId[i.rank], i.qualifications]
     );
+    await client.query('UPDATE instructors SET rank_id = $1 WHERE id = $2', [rankId[i.rank], instructorId[i.name]]);
     for (const c of i.centres) {
       await client.query(
         'INSERT INTO instructor_centres (instructor_id, centre_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',

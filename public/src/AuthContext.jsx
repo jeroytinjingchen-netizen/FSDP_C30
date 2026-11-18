@@ -1,3 +1,5 @@
+﻿// AuthContext.jsx - shares the logged-in user with every component through React context.
+// useContext(AuthContext) gives any component { user, login, logout } without passing props down.
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { api, clearUser, getStoredUser, storeUser } from './api.js';
 
@@ -28,3 +30,4 @@ export function AuthProvider({ children }) {
 
 export const useAuth = () => useContext(AuthContext);
 export { CENTRE_KEY };
+

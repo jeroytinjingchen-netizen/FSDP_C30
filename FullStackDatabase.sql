@@ -24,7 +24,7 @@ GRANT ALL ON SCHEMA public TO postgres, service_role;
 CREATE TYPE user_role            AS ENUM ('ADMIN', 'STUDENT');
 CREATE TYPE session_status       AS ENUM ('SCHEDULED', 'COMPLETED', 'CANCELLED');
 CREATE TYPE grading_type         AS ENUM ('MASS', 'PRIVATE');
-CREATE TYPE grading_outcome      AS ENUM ('PASS', 'FAIL');
+CREATE TYPE grading_outcome      AS ENUM ('GRADED', 'NOT_GRADED');   -- AS-10: replaces PASS / FAIL
 CREATE TYPE invoice_status       AS ENUM ('UNPAID', 'PARTIALLY_PAID', 'PAID', 'VOID');
 CREATE TYPE payment_channel      AS ENUM ('STRIPE', 'WHATSAPP', 'EMAIL', 'CASH', 'BANK_TRANSFER', 'OTHER');
 CREATE TYPE payment_status       AS ENUM ('PENDING', 'COMPLETED', 'FAILED');
@@ -62,10 +62,13 @@ CREATE TABLE centres (
   address     text,
   email       text,
   phone       text,
+  is_hq       boolean     NOT NULL DEFAULT false,      -- AS-10: gradings are held only at HQ
   is_active   boolean     NOT NULL DEFAULT true,
   created_at  timestamptz NOT NULL DEFAULT now(),
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
+-- At most one centre can be HQ.
+CREATE UNIQUE INDEX uq_centres_single_hq ON centres (is_hq) WHERE is_hq;
 
 CREATE TABLE venues (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -167,8 +170,10 @@ CREATE INDEX idx_terms_centre_start ON terms(centre_id, start_date);
 -- Weekly recurring definition of a class.
 CREATE TABLE class_templates (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  term_id        uuid        NOT NULL REFERENCES terms(id),
-  venue_id       uuid        NOT NULL REFERENCES venues(id),
+  centre_id      uuid        NOT NULL REFERENCES centres(id),      -- AS-4: a class belongs to a centre
+  instructor_id  uuid        REFERENCES instructors(id),           -- AS-6: one fixed instructor
+  term_id        uuid        REFERENCES terms(id),                 -- legacy, no longer used
+  venue_id       uuid        REFERENCES venues(id),                -- legacy, no longer used
   level_rank_id  uuid        REFERENCES ranks(id),    -- optional: class aimed at a rank
   name           text        NOT NULL,
   weekday        smallint    NOT NULL CHECK (weekday BETWEEN 0 AND 6),
@@ -179,6 +184,8 @@ CREATE TABLE class_templates (
 );
 CREATE INDEX idx_class_templates_term  ON class_templates(term_id);
 CREATE INDEX idx_class_templates_venue ON class_templates(venue_id, weekday);
+CREATE INDEX idx_class_templates_centre     ON class_templates(centre_id, weekday);
+CREATE INDEX idx_class_templates_instructor ON class_templates(instructor_id);
 
 CREATE TABLE class_template_instructors (
   template_id    uuid NOT NULL REFERENCES class_templates(id) ON DELETE CASCADE,
@@ -190,7 +197,7 @@ CREATE TABLE class_template_instructors (
 CREATE TABLE class_sessions (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   template_id  uuid           NOT NULL REFERENCES class_templates(id) ON DELETE CASCADE,
-  venue_id     uuid           NOT NULL REFERENCES venues(id),   -- can be changed for a single session
+  venue_id     uuid           REFERENCES venues(id),            -- legacy, no longer used
   starts_at    timestamptz    NOT NULL,
   ends_at      timestamptz    NOT NULL,
   status       session_status NOT NULL DEFAULT 'SCHEDULED',
@@ -212,7 +219,7 @@ CREATE INDEX idx_session_instructors_instructor ON class_session_instructors(ins
 CREATE TABLE grading_sessions (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   centre_id   uuid           NOT NULL REFERENCES centres(id),
-  venue_id    uuid           NOT NULL REFERENCES venues(id),
+  venue_id    uuid           REFERENCES venues(id),             -- legacy: gradings are at HQ, no room needed
   type        grading_type   NOT NULL,
   status      session_status NOT NULL DEFAULT 'SCHEDULED',
   title       text,
@@ -246,6 +253,8 @@ CREATE TABLE grading_candidates (
   grading_session_id  uuid            NOT NULL REFERENCES grading_sessions(id) ON DELETE CASCADE,
   student_id          uuid            NOT NULL REFERENCES students(id),
   from_rank_id        uuid            NOT NULL REFERENCES ranks(id),   -- rank when registered
+  graded_for_rank_id  uuid            REFERENCES ranks(id),            -- AS-10: rank graded for
+  instructor_id       uuid            REFERENCES instructors(id),      -- AS-10: grading instructor
   outcome             grading_outcome,                                  -- NULL until recorded
   remarks             text,
   result_recorded_at  timestamptz,
@@ -254,14 +263,17 @@ CREATE TABLE grading_candidates (
 );
 CREATE INDEX idx_candidates_student ON grading_candidates(student_id);
 
--- One promotion per candidate row: the UNIQUE candidate_id makes re-submitting results idempotent.
+-- Rank history (AS-8). Ranks change only when an admin updates them, never automatically.
+-- candidate_id is optional (NULL for manual changes); UNIQUE still allows many NULLs.
 CREATE TABLE promotion_history (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   student_id    uuid        NOT NULL REFERENCES students(id),
-  candidate_id  uuid        NOT NULL UNIQUE REFERENCES grading_candidates(id),
+  candidate_id  uuid        UNIQUE REFERENCES grading_candidates(id),
   from_rank_id  uuid        NOT NULL REFERENCES ranks(id),
   to_rank_id    uuid        NOT NULL REFERENCES ranks(id),
-  promoted_at   timestamptz NOT NULL DEFAULT now()
+  promoted_at   timestamptz NOT NULL DEFAULT now(),
+  changed_by_id uuid        REFERENCES users(id),     -- admin who made the change
+  note          text
 );
 CREATE INDEX idx_promotions_student ON promotion_history(student_id);
 CREATE INDEX idx_promotions_date    ON promotion_history(promoted_at);
@@ -301,22 +313,96 @@ CREATE TABLE invoices (
 CREATE INDEX idx_invoices_status_due ON invoices(status, due_date);
 CREATE INDEX idx_invoices_student    ON invoices(student_id);
 
--- Balance = invoice.amount_cents - sum(COMPLETED payments). Supports partial payments.
+-- AS-9: packages sold by HQ (no admin screen, rows are maintained in the database).
+CREATE TABLE packages (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name            text        NOT NULL UNIQUE,
+  sessions_total  integer     NOT NULL CHECK (sessions_total > 0),
+  validity_weeks  integer     NOT NULL CHECK (validity_weeks > 0),
+  price_cents     integer     NOT NULL CHECK (price_cents >= 0),
+  currency        text        NOT NULL DEFAULT 'SGD',
+  is_active       boolean     NOT NULL DEFAULT true,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+
+-- AS-12: a payment belongs to a student and a package. invoice_id is kept only for old rows.
+-- Status is COMPLETED (shown as Successful) or FAILED. paid_at is the exact payment time.
+-- Each payment method has its own sequence, producing references such as BT-00001 and C-00001.
+CREATE SEQUENCE payment_reference_bank_transfer_seq;
+CREATE SEQUENCE payment_reference_cash_seq;
+CREATE SEQUENCE payment_reference_stripe_seq;
+CREATE SEQUENCE payment_reference_whatsapp_seq;
+CREATE SEQUENCE payment_reference_email_seq;
+CREATE SEQUENCE payment_reference_other_seq;
+
 CREATE TABLE payments (
   id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  invoice_id              uuid            NOT NULL REFERENCES invoices(id),
+  invoice_id              uuid            REFERENCES invoices(id),
+  student_id              uuid            REFERENCES students(id),
+  package_id              uuid            REFERENCES packages(id),
   amount_cents            integer         NOT NULL CHECK (amount_cents > 0),
   channel                 payment_channel NOT NULL,
   status                  payment_status  NOT NULL DEFAULT 'COMPLETED',
   paid_at                 timestamptz     NOT NULL DEFAULT now(),
-  reference               text,                          -- bank ref, WhatsApp note, etc.
+  reference               text            NOT NULL UNIQUE,
   notes                   text,
   recorded_by_id          uuid            REFERENCES users(id),   -- admin who logged a manual payment
   stripe_checkout_session text            UNIQUE,
   stripe_payment_intent   text            UNIQUE,
-  created_at              timestamptz     NOT NULL DEFAULT now()
+  created_at              timestamptz     NOT NULL DEFAULT now(),
+  CONSTRAINT chk_payments_status CHECK (status IN ('COMPLETED', 'FAILED')),
+  CONSTRAINT chk_payments_owner  CHECK (invoice_id IS NOT NULL OR student_id IS NOT NULL)
 );
-CREATE INDEX idx_payments_invoice ON payments(invoice_id);
+
+-- BEFORE INSERT runs before a new row is saved. NEW is the row being inserted.
+-- nextval() takes the next number from the sequence for that payment method.
+-- lpad(..., 5, '0') pads the number to five digits, for example 12 -> 00012.
+CREATE FUNCTION assign_payment_reference() RETURNS trigger AS $$
+BEGIN
+  NEW.reference := CASE NEW.channel
+    WHEN 'BANK_TRANSFER' THEN 'BT-' || lpad(nextval('payment_reference_bank_transfer_seq')::text, 5, '0')
+    WHEN 'CASH'          THEN 'C-'  || lpad(nextval('payment_reference_cash_seq')::text, 5, '0')
+    WHEN 'STRIPE'        THEN 'ST-' || lpad(nextval('payment_reference_stripe_seq')::text, 5, '0')
+    WHEN 'WHATSAPP'      THEN 'WA-' || lpad(nextval('payment_reference_whatsapp_seq')::text, 5, '0')
+    WHEN 'EMAIL'         THEN 'EM-' || lpad(nextval('payment_reference_email_seq')::text, 5, '0')
+    ELSE                      'OT-' || lpad(nextval('payment_reference_other_seq')::text, 5, '0')
+  END;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER payments_assign_reference
+BEFORE INSERT ON payments
+FOR EACH ROW EXECUTE FUNCTION assign_payment_reference();
+
+CREATE INDEX idx_payments_invoice   ON payments(invoice_id);
+CREATE INDEX idx_payments_student   ON payments(student_id);
+CREATE INDEX idx_payments_reference ON payments(reference);
+
+-- A package a student owns. It exists only after a Successful payment (payment_id is required and unique).
+CREATE TABLE student_packages (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id      uuid        NOT NULL REFERENCES students(id),
+  package_id      uuid        NOT NULL REFERENCES packages(id),
+  payment_id      uuid        NOT NULL UNIQUE REFERENCES payments(id),
+  name            text        NOT NULL,
+  sessions_total  integer     NOT NULL CHECK (sessions_total > 0),
+  purchased_at    timestamptz NOT NULL DEFAULT now(),
+  expires_at      timestamptz NOT NULL,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_student_packages_student ON student_packages(student_id, expires_at);
+
+-- One row per session attended. Sessions used = row count. One per student per Singapore day.
+CREATE TABLE attendance (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id          uuid        NOT NULL REFERENCES students(id),
+  student_package_id  uuid        NOT NULL REFERENCES student_packages(id) ON DELETE CASCADE,
+  attended_at         timestamptz NOT NULL DEFAULT now(),
+  attended_on         date        NOT NULL DEFAULT ((now() AT TIME ZONE 'Asia/Singapore')::date),
+  UNIQUE (student_id, attended_on)
+);
+CREATE INDEX idx_attendance_package ON attendance(student_package_id);
 CREATE INDEX idx_payments_paid_at ON payments(paid_at);
 CREATE INDEX idx_payments_channel ON payments(channel);
 
@@ -477,14 +563,270 @@ INSERT INTO users (email, password_hash, role) VALUES
 ON CONFLICT (email) DO UPDATE
   SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, is_active = true;
 
-INSERT INTO centres (name, address) VALUES ('Shinjukai Bishan Centre', '1 Bishan Street 10, Singapore')
+
+-- ---------------------------------------------------------------- Sample data (dev/demo only)
+-- Everything below is demo data. Delete this section for a production database.
+-- Each INSERT looks up related rows by name or email (JOIN ... ON), so no ids are hard-coded.
+
+-- Ranks from 12th Kyu up to 7th Dan. rank_order is unique and sets the order.
+INSERT INTO ranks (name, rank_order, colour) VALUES
+  ('12th Kyu', 1, 'Red'),
+  ('11th Kyu', 2, 'Red-Gold'),
+  ('10th Kyu', 3, 'Yellow'),
+  ('9th Kyu', 4, 'Orange'),
+  ('8th Kyu', 5, 'Green'),
+  ('7th Kyu', 6, 'Purple'),
+  ('6th Kyu', 7, 'Blue'),
+  ('Blue-Silver', 8, 'Blue-Silver'),
+  ('5th Kyu', 9, 'Blue-Gold'),
+  ('4th Kyu', 10, 'Brown'),
+  ('Brown-Silver', 11, 'Brown-Silver'),
+  ('3rd Kyu', 12, 'Brown-Gold'),
+  ('2nd Kyu', 13, 'Black'),
+  ('Black-Silver', 14, 'Black-Silver'),
+  ('1st Kyu', 15, 'Black-Gold'),
+  ('Junior Dan', 16, 'Black'),
+  ('1st Dan', 17, 'Black'),
+  ('2nd Dan', 18, 'Black'),
+  ('3rd Dan', 19, 'Black'),
+  ('4th Dan', 20, 'Black'),
+  ('5th Dan', 21, 'Black'),
+  ('6th Dan', 22, 'Black'),
+  ('7th Dan', 23, 'Black')
 ON CONFLICT (name) DO NOTHING;
 
-INSERT INTO ranks (name, rank_order, colour) VALUES ('6th Kyu', 1, 'White')
+-- Centres. ASK Headquarters Dojo is HQ, the only place gradings are held.
+INSERT INTO centres (name, address, email, phone, is_hq) VALUES
+  ('Shinjukai Bishan Centre', '1 Bishan Street 10, Singapore', 'bishan@aikidoshinjukai.com', '+65 6000 1001', false),
+  ('Shinjukai Jurong Centre', '2 Jurong East Street 21, Singapore', 'jurong@aikidoshinjukai.com', '+65 6000 1002', false),
+  ('ASK Headquarters Dojo', 'Singapore', NULL, NULL, true),
+  ('Marine Parade Dojo', NULL, NULL, NULL, false),
+  ('Rivervale Dojo', NULL, NULL, NULL, false),
+  ('Tampines West Dojo', NULL, NULL, NULL, false),
+  ('Thomson Dojo', NULL, NULL, NULL, false),
+  ('Bukit Timah Dojo', NULL, NULL, NULL, false),
+  ('SMU Dojo', NULL, NULL, NULL, false),
+  ('Siglap South Dojo', NULL, NULL, NULL, false)
 ON CONFLICT (name) DO NOTHING;
 
+-- Packages sold by HQ (example: 10 sessions valid for 11 weeks).
+INSERT INTO packages (name, sessions_total, validity_weeks, price_cents) VALUES
+  ('10-Session Package', 10, 11, 18000),
+  ('20-Session Package', 20, 22, 32000)
+ON CONFLICT (name) DO NOTHING;
+
+-- Instructors. They do not log in, so there is no availability data.
+INSERT INTO instructors (name, email, phone, rank_id, qualifications)
+SELECT v.name, v.email, v.phone, r.id, v.qualifications
+FROM (VALUES
+  ('Tan Wei Ming',   'tan.weiming@aikidoshinjukai.com',   '+65 9100 2001', '1st Dan', 'Senior instructor, 20 years of practice'),
+  ('Aiko Yamada',    'aiko.yamada@aikidoshinjukai.com',   '+65 9100 2002', '1st Dan', 'Certified Aikido instructor, children and beginners'),
+  ('Rahim Abdullah', 'rahim.abdullah@aikidoshinjukai.com','+65 9100 2003', '1st Dan', 'Assistant instructor'),
+  ('Kenji Sato',     'kenji.sato@aikidoshinjukai.com',    '+65 9100 2004', '1st Dan', 'Head instructor, ASK Headquarters'),
+  ('Siti Aminah',    'siti.aminah@aikidoshinjukai.com',   '+65 9100 2005', '1st Dan', 'Instructor, beginners and teens'),
+  ('Lucas Wong',     'lucas.wong@aikidoshinjukai.com',    '+65 9100 2006', '1st Dan', 'Assistant instructor, weekend classes'),
+  ('Priya Nair',     'priya.nair@aikidoshinjukai.com',    '+65 9100 2007', '1st Dan', 'Instructor, adult classes'),
+  ('Marcus Chua',    'marcus.chua@aikidoshinjukai.com',   '+65 9100 2008', '1st Dan', 'Assistant instructor, university club'),
+  ('Hannah Lee',     'hannah.lee@aikidoshinjukai.com',    '+65 9100 2009', '1st Dan', 'Instructor, children and beginners')
+) AS v(name, email, phone, rank_name, qualifications)
+JOIN ranks r ON r.name = v.rank_name
+WHERE NOT EXISTS (SELECT 1 FROM instructors i WHERE i.name = v.name);
+
+-- Which centres each instructor teaches at.
+INSERT INTO instructor_centres (instructor_id, centre_id)
+SELECT i.id, c.id
+FROM (VALUES
+  ('Tan Wei Ming',   'Shinjukai Bishan Centre'),
+  ('Tan Wei Ming',   'Shinjukai Jurong Centre'),
+  ('Aiko Yamada',    'Shinjukai Bishan Centre'),
+  ('Rahim Abdullah', 'Shinjukai Jurong Centre'),
+  ('Kenji Sato',     'ASK Headquarters Dojo'),
+  ('Siti Aminah',    'Marine Parade Dojo'),
+  ('Siti Aminah',    'Rivervale Dojo'),
+  ('Lucas Wong',     'Tampines West Dojo'),
+  ('Priya Nair',     'Thomson Dojo'),
+  ('Priya Nair',     'Bukit Timah Dojo'),
+  ('Marcus Chua',    'SMU Dojo'),
+  ('Hannah Lee',     'Siglap South Dojo')
+) AS v(instructor_name, centre_name)
+JOIN instructors i ON i.name = v.instructor_name
+JOIN centres c ON c.name = v.centre_name
+ON CONFLICT DO NOTHING;
+
+-- Classes. A class belongs to one centre, has one fixed instructor and a weekly day and time.
+-- weekday: 0 = Sunday ... 6 = Saturday. Times are minutes after midnight (1140 = 19:00).
+INSERT INTO class_templates (centre_id, instructor_id, level_rank_id, name, weekday, start_minute, end_minute)
+SELECT c.id, i.id, r.id, v.class_name, v.weekday, v.start_minute, v.end_minute
+FROM (VALUES
+  ('Shinjukai Bishan Centre', 'Beginners Aikido',    2, 1140, 1200, '6th Kyu', 'Tan Wei Ming'),
+  ('Shinjukai Bishan Centre', 'Intermediate Aikido', 4, 1170, 1260, '4th Kyu', 'Tan Wei Ming'),
+  ('Shinjukai Bishan Centre', 'Kids Aikido',         6,  540,  600, '6th Kyu', 'Aiko Yamada'),
+  ('Shinjukai Jurong Centre', 'Beginners Aikido',    2, 1140, 1200, '6th Kyu', 'Rahim Abdullah'),
+  ('Shinjukai Jurong Centre', 'Weekend Aikido',      6,  600,  690, '3rd Kyu', 'Rahim Abdullah'),
+  ('ASK Headquarters Dojo',   'Adult Aikido',        1, 1140, 1260, '6th Kyu', 'Kenji Sato'),
+  ('Marine Parade Dojo',      'Saturday Aikido',     6,  600,  660, '6th Kyu', 'Siti Aminah')
+) AS v(centre_name, class_name, weekday, start_minute, end_minute, level_name, instructor_name)
+JOIN centres c ON c.name = v.centre_name
+JOIN instructors i ON i.name = v.instructor_name
+LEFT JOIN ranks r ON r.name = v.level_name
+WHERE NOT EXISTS (
+  SELECT 1 FROM class_templates ct
+   WHERE ct.centre_id = c.id AND ct.name = v.class_name AND ct.weekday = v.weekday
+);
+
+-- Students. guardian columns are filled only for minors.
+INSERT INTO students (centre_id, current_rank_id, first_name, last_name, email, phone, date_of_birth, guardian_name, guardian_phone)
+SELECT c.id, r.id, v.first_name, v.last_name, v.email, v.phone, v.date_of_birth::date, v.guardian_name, v.guardian_phone
+FROM (VALUES
+  ('Alice',    'Tan',    'alice.tan@example.com',    'Shinjukai Bishan Centre', '5th Kyu', '+65 9123 4001', '2012-04-18', 'Tan Mei Ling',  '+65 9123 4100'),
+  ('Benjamin', 'Lim',    'ben.lim@example.com',      'Shinjukai Bishan Centre', '4th Kyu', '+65 9123 4002', '1995-07-02', NULL, NULL),
+  ('Chloe',    'Ng',     'chloe.ng@example.com',     'Shinjukai Bishan Centre', '6th Kyu', '+65 9123 4003', '2001-11-30', NULL, NULL),
+  ('Daniel',   'Ong',    'daniel.ong@example.com',   'Shinjukai Jurong Centre', '3rd Kyu', '+65 9123 4004', '1988-03-14', NULL, NULL),
+  ('Eliza',    'Koh',    'eliza.koh@example.com',    'Shinjukai Jurong Centre', '9th Kyu', NULL,            '2015-09-09', 'Koh Hwee Ling', '+65 9123 4200'),
+  ('Farid',    'Ismail', 'farid.ismail@example.com', 'Shinjukai Jurong Centre', '2nd Kyu', '+65 9123 4005', '1992-01-21', NULL, NULL)
+) AS v(first_name, last_name, email, centre_name, rank_name, phone, date_of_birth, guardian_name, guardian_phone)
+JOIN centres c ON c.name = v.centre_name
+JOIN ranks r ON r.name = v.rank_name
+ON CONFLICT (email) DO NOTHING;
+
+-- The demo student login (student@gmail.com) is a student record too.
 INSERT INTO students (user_id, centre_id, current_rank_id, first_name, last_name, email)
 SELECT u.id, c.id, r.id, 'Demo', 'Student', u.email
 FROM users u, centres c, ranks r
 WHERE u.email = 'student@gmail.com' AND c.name = 'Shinjukai Bishan Centre' AND r.name = '6th Kyu'
 ON CONFLICT (email) DO NOTHING;
+
+-- Payments (AS-12). Students buy packages online. COMPLETED is shown as Successful.
+-- The trigger assigns ST-00001, ST-00002 and so on in insertion order.
+INSERT INTO payments (student_id, package_id, amount_cents, channel, status, paid_at)
+SELECT s.id, p.id, p.price_cents, 'STRIPE'::payment_channel, v.status::payment_status,
+       v.paid_at::timestamptz
+FROM (VALUES
+  ('alice.tan@example.com',    '10-Session Package', 'COMPLETED', '2026-10-03T09:15:00+08:00'),
+  ('ben.lim@example.com',      '20-Session Package', 'COMPLETED', '2026-10-10T19:30:00+08:00'),
+  ('chloe.ng@example.com',     '10-Session Package', 'FAILED',    '2026-10-12T18:05:00+08:00'),
+  ('daniel.ong@example.com',   '10-Session Package', 'COMPLETED', '2026-10-15T20:00:00+08:00'),
+  ('eliza.koh@example.com',    '10-Session Package', 'FAILED',    '2026-11-02T10:20:00+08:00'),
+  ('eliza.koh@example.com',    '10-Session Package', 'COMPLETED', '2026-11-02T10:24:00+08:00'),
+  ('student@gmail.com',        '10-Session Package', 'COMPLETED', '2026-11-10T09:00:00+08:00')
+) AS v(email, package_name, status, paid_at)
+JOIN students s ON s.email = v.email
+JOIN packages p ON p.name = v.package_name
+WHERE NOT EXISTS (
+  SELECT 1 FROM payments x
+  WHERE x.student_id = s.id AND x.paid_at = v.paid_at::timestamptz
+);
+
+-- A Successful payment activates the package. It expires validity_weeks after the payment.
+-- Failed payments get no package.
+INSERT INTO student_packages (student_id, package_id, payment_id, name, sessions_total, purchased_at, expires_at)
+SELECT pay.student_id, pk.id, pay.id, pk.name, pk.sessions_total, pay.paid_at,
+       pay.paid_at + (pk.validity_weeks * interval '1 week')
+FROM payments pay
+JOIN packages pk ON pk.id = pay.package_id
+WHERE pay.status = 'COMPLETED'
+ON CONFLICT (payment_id) DO NOTHING;
+
+-- Attendance. Each row uses one session of the student's package.
+INSERT INTO attendance (student_id, student_package_id, attended_at, attended_on)
+SELECT s.id, sp.id, v.attended::timestamptz, (v.attended::timestamptz AT TIME ZONE 'Asia/Singapore')::date
+FROM (VALUES
+  ('alice.tan@example.com',  '2026-10-06T19:05:00+08:00'),
+  ('alice.tan@example.com',  '2026-10-13T19:02:00+08:00'),
+  ('alice.tan@example.com',  '2026-10-20T19:04:00+08:00'),
+  ('alice.tan@example.com',  '2026-10-27T19:01:00+08:00'),
+  ('ben.lim@example.com',    '2026-10-15T19:35:00+08:00'),
+  ('ben.lim@example.com',    '2026-10-22T19:33:00+08:00'),
+  ('ben.lim@example.com',    '2026-10-29T19:30:00+08:00'),
+  ('ben.lim@example.com',    '2026-11-05T19:36:00+08:00'),
+  ('ben.lim@example.com',    '2026-11-12T19:31:00+08:00'),
+  ('daniel.ong@example.com', '2026-10-20T19:05:00+08:00'),
+  ('daniel.ong@example.com', '2026-10-27T19:03:00+08:00'),
+  ('eliza.koh@example.com',  '2026-11-07T10:02:00+08:00'),
+  ('eliza.koh@example.com',  '2026-11-14T10:01:00+08:00'),
+  ('student@gmail.com',      '2026-11-10T19:04:00+08:00'),
+  ('student@gmail.com',      '2026-11-17T19:02:00+08:00')
+) AS v(email, attended)
+JOIN students s ON s.email = v.email
+JOIN student_packages sp ON sp.student_id = s.id
+ON CONFLICT (student_id, attended_on) DO NOTHING;
+
+-- Gradings (AS-10, AS-11). They are held only at HQ and need no room.
+INSERT INTO grading_sessions (centre_id, type, status, title, starts_at, ends_at)
+SELECT c.id, 'MASS'::grading_type, v.status::session_status, v.title,
+       v.starts_at::timestamptz, v.ends_at::timestamptz
+FROM centres c,
+     (VALUES
+       ('Mass Grading - HQ (Jun 2026)', 'COMPLETED', '2026-06-14T10:00:00+08:00', '2026-06-14T13:00:00+08:00'),
+       ('Mass Grading - HQ (Dec 2026)', 'SCHEDULED', '2026-12-06T10:00:00+08:00', '2026-12-06T13:00:00+08:00')
+     ) AS v(title, status, starts_at, ends_at)
+WHERE c.is_hq
+  AND NOT EXISTS (SELECT 1 FROM grading_sessions g WHERE g.title = v.title);
+
+-- Which ranks each grading tests.
+INSERT INTO grading_ranks_tested (grading_session_id, rank_id)
+SELECT g.id, r.id
+FROM (VALUES
+  ('Mass Grading - HQ (Jun 2026)', '9th Kyu'),
+  ('Mass Grading - HQ (Jun 2026)', '5th Kyu'),
+  ('Mass Grading - HQ (Jun 2026)', '4th Kyu'),
+  ('Mass Grading - HQ (Jun 2026)', '3rd Kyu'),
+  ('Mass Grading - HQ (Jun 2026)', '2nd Kyu'),
+  ('Mass Grading - HQ (Dec 2026)', '5th Kyu'),
+  ('Mass Grading - HQ (Dec 2026)', '4th Kyu'),
+  ('Mass Grading - HQ (Dec 2026)', '1st Kyu')
+) AS v(title, rank_name)
+JOIN grading_sessions g ON g.title = v.title
+JOIN ranks r ON r.name = v.rank_name
+ON CONFLICT DO NOTHING;
+
+INSERT INTO grading_examiners (grading_session_id, instructor_id)
+SELECT g.id, i.id
+FROM grading_sessions g, instructors i
+WHERE g.title IN ('Mass Grading - HQ (Jun 2026)', 'Mass Grading - HQ (Dec 2026)')
+  AND i.name = 'Kenji Sato'
+ON CONFLICT DO NOTHING;
+
+-- Results per student: rank graded for, grading instructor and outcome (GRADED or NOT_GRADED).
+-- The December rows have no outcome yet. Results never change a student's rank by themselves.
+INSERT INTO grading_candidates (grading_session_id, student_id, from_rank_id, graded_for_rank_id, instructor_id, outcome, result_recorded_at)
+SELECT g.id, s.id, fr.id, tr.id, i.id, v.outcome::grading_outcome,
+       CASE WHEN v.outcome IS NULL THEN NULL ELSE g.ends_at END
+FROM (VALUES
+  ('Mass Grading - HQ (Jun 2026)', 'alice.tan@example.com',    '6th Kyu', '5th Kyu', 'GRADED',     'Kenji Sato'),
+  ('Mass Grading - HQ (Jun 2026)', 'ben.lim@example.com',      '5th Kyu', '4th Kyu', 'GRADED',     'Kenji Sato'),
+  ('Mass Grading - HQ (Jun 2026)', 'chloe.ng@example.com',     '6th Kyu', '5th Kyu', 'NOT_GRADED', 'Kenji Sato'),
+  ('Mass Grading - HQ (Jun 2026)', 'daniel.ong@example.com',   '4th Kyu', '3rd Kyu', 'GRADED',     'Kenji Sato'),
+  ('Mass Grading - HQ (Jun 2026)', 'eliza.koh@example.com',    '10th Kyu','9th Kyu', 'GRADED',     'Kenji Sato'),
+  ('Mass Grading - HQ (Jun 2026)', 'farid.ismail@example.com', '3rd Kyu', '2nd Kyu', 'GRADED',     'Kenji Sato'),
+  ('Mass Grading - HQ (Dec 2026)', 'alice.tan@example.com',    '5th Kyu', '4th Kyu', NULL,         NULL),
+  ('Mass Grading - HQ (Dec 2026)', 'chloe.ng@example.com',     '6th Kyu', '5th Kyu', NULL,         NULL),
+  ('Mass Grading - HQ (Dec 2026)', 'farid.ismail@example.com', '2nd Kyu', '1st Kyu', NULL,         NULL)
+) AS v(title, email, from_rank, for_rank, outcome, instructor_name)
+JOIN grading_sessions g ON g.title = v.title
+JOIN students s ON s.email = v.email
+JOIN ranks fr ON fr.name = v.from_rank
+JOIN ranks tr ON tr.name = v.for_rank
+LEFT JOIN instructors i ON i.name = v.instructor_name
+ON CONFLICT (grading_session_id, student_id) DO NOTHING;
+
+-- Rank history (AS-8). HQ updated these ranks by hand after the June grading.
+INSERT INTO promotion_history (student_id, from_rank_id, to_rank_id, promoted_at, changed_by_id, note)
+SELECT s.id, fr.id, tr.id, v.promoted_at::timestamptz,
+       (SELECT id FROM users WHERE email = 'admin@as.com'), v.note
+FROM (VALUES
+  ('alice.tan@example.com',    '6th Kyu',  '5th Kyu', '2026-06-16T10:00:00+08:00', 'Updated by HQ after the June grading'),
+  ('ben.lim@example.com',      '5th Kyu',  '4th Kyu', '2026-06-16T10:00:00+08:00', 'Updated by HQ after the June grading'),
+  ('daniel.ong@example.com',   '4th Kyu',  '3rd Kyu', '2026-06-16T10:00:00+08:00', 'Updated by HQ after the June grading'),
+  ('eliza.koh@example.com',    '10th Kyu', '9th Kyu', '2026-06-16T10:00:00+08:00', 'Updated by HQ after the June grading'),
+  ('farid.ismail@example.com', '3rd Kyu',  '2nd Kyu', '2026-06-16T10:00:00+08:00', 'Updated by HQ after the June grading')
+) AS v(email, from_rank, to_rank, promoted_at, note)
+JOIN students s ON s.email = v.email
+JOIN ranks fr ON fr.name = v.from_rank
+JOIN ranks tr ON tr.name = v.to_rank
+WHERE NOT EXISTS (SELECT 1 FROM promotion_history h WHERE h.student_id = s.id AND h.to_rank_id = tr.id);
+
+-- Time-in-rank starts from the last rank change.
+UPDATE students s SET rank_since = h.promoted_at
+FROM promotion_history h
+WHERE h.student_id = s.id AND h.to_rank_id = s.current_rank_id;

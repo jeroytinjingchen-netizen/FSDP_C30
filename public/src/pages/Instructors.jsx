@@ -1,6 +1,12 @@
+﻿// Instructors.jsx - admin page to add, edit, search and deactivate instructors (AS-5, AS-6).
+// Instructors do not log in, so this is only a record of their contact details, rank or
+// qualifications, and the classes they are posted to. There is no availability editor.
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
-import { ArchiveIcon, CalendarIcon, PencilIcon, PlusIcon, RestoreIcon, XIcon } from '../components/Icons.jsx';
+import { useCentre } from '../CentreContext.jsx';
+import CentreSwitcher from '../components/CentreSwitcher.jsx';
+import { ArchiveIcon, CalendarIcon, PencilIcon, PlusIcon, RestoreIcon } from '../components/Icons.jsx';
+import { formatSlot } from '../format.js';
 import {
   Button,
   ConfirmDialog,
@@ -15,44 +21,42 @@ import {
   inputClass,
 } from '../components/ui.jsx';
 
-const EMPTY = { id: '', name: '', email: '', phone: '', rank_id: '', qualifications: '', centre_ids: [] };
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-// Minutes since midnight <-> "HH:MM" for time inputs
-const toTime = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-const toMinutes = (t) => {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
-};
+// Blank form values for "Add instructor".
+const EMPTY = { id: '', name: '', email: '', phone: '', rank_id: '', qualifications: '' };
 
 export default function Instructors() {
+  const { centreId } = useCentre();
   const [rows, setRows] = useState([]);
-  const [centres, setCentres] = useState([]);
   const [ranks, setRanks] = useState([]);
+  const [search, setSearch] = useState(''); // text typed in the search box
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(null);
-  const [availFor, setAvailFor] = useState(null);
-  const [slots, setSlots] = useState([]);
   const [confirm, setConfirm] = useState(null);
   const [alert, setAlert] = useState(null);
 
+  // Loads instructors. URLSearchParams builds the query string safely (it escapes special characters).
   const load = useCallback(async () => {
-    const [list, centreList, rankList] = await Promise.all([
-      api('/api/instructors'),
-      api('/api/centres'),
-      api('/api/lookups/ranks'),
-    ]);
+    const params = new URLSearchParams();
+    if (search.trim()) params.set('q', search.trim());
+    if (centreId) params.set('centreId', centreId);
+    const qs = params.toString();
+    const [list, rankList] = await Promise.all([api(`/api/instructors${qs ? `?${qs}` : ''}`), api('/api/lookups/ranks')]);
     setRows(list);
-    setCentres(centreList.filter((c) => c.is_active));
     setRanks(rankList);
-  }, []);
+  }, [search, centreId]);
 
+  // Re-load when the search text or centre changes. The 250 ms timer waits until the user stops typing.
+  // Returning a function from useEffect cleans up: here it cancels the timer if the effect re-runs.
   useEffect(() => {
-    load()
-      .catch((err) => setAlert({ error: true, text: err.message }))
-      .finally(() => setLoading(false));
+    const timer = setTimeout(() => {
+      load()
+        .catch((err) => setAlert({ error: true, text: err.message }))
+        .finally(() => setLoading(false));
+    }, 250);
+    return () => clearTimeout(timer);
   }, [load]);
 
+  // Runs an API action, shows a toast, then reloads.
   async function run(action, successText) {
     try {
       await action();
@@ -63,29 +67,19 @@ export default function Instructors() {
     }
   }
 
+  // Saves the form: PUT when editing, POST when adding. An empty rank is sent as null.
   function save(e) {
     e.preventDefault();
     const { id, ...body } = form;
     const payload = { ...body, rank_id: body.rank_id || null };
     setForm(null);
     run(
-      () =>
-        api(id ? `/api/instructors/${id}` : '/api/instructors', {
-          method: id ? 'PUT' : 'POST',
-          body: JSON.stringify(payload),
-        }),
+      () => api(id ? `/api/instructors/${id}` : '/api/instructors', { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) }),
       id ? 'Instructor updated.' : 'Instructor added.'
     );
   }
 
-  const toggleCentre = (centreId) =>
-    setForm((f) => ({
-      ...f,
-      centre_ids: f.centre_ids.includes(centreId)
-        ? f.centre_ids.filter((c) => c !== centreId)
-        : [...f.centre_ids, centreId],
-    }));
-
+  // Opens the dialog with an instructor's current details (null values become empty strings for the inputs).
   const openEdit = (i) =>
     setForm({
       id: i.id,
@@ -94,43 +88,13 @@ export default function Instructors() {
       phone: i.phone || '',
       rank_id: i.rank_id || '',
       qualifications: i.qualifications || '',
-      centre_ids: i.centre_ids || [],
     });
 
-  const openAvailability = async (i) => {
-    try {
-      const data = await api(`/api/instructors/${i.id}/availability`);
-      setSlots(data.map((s) => ({ weekday: s.weekday, start: toTime(s.start_minute), end: toTime(s.end_minute) })));
-      setAvailFor(i);
-    } catch (err) {
-      setAlert({ error: true, text: err.message });
-    }
-  };
-
-  function saveAvailability(e) {
-    e.preventDefault();
-    const body = {
-      slots: slots.map((s) => ({
-        weekday: Number(s.weekday),
-        start_minute: toMinutes(s.start),
-        end_minute: toMinutes(s.end),
-      })),
-    };
-    const name = availFor.name;
-    setAvailFor(null);
-    run(
-      () => api(`/api/instructors/${availFor.id}/availability`, { method: 'PUT', body: JSON.stringify(body) }),
-      `Availability saved for ${name}.`
-    );
-  }
-
-  const updateSlot = (idx, key, value) =>
-    setSlots((list) => list.map((s, i) => (i === idx ? { ...s, [key]: value } : s)));
-
+  // Asks for confirmation, then deactivates or reactivates the instructor.
   const toggleActive = (i) =>
     setConfirm({
       title: i.is_active ? 'Deactivate instructor?' : 'Activate instructor?',
-      message: `${i.name} will be ${i.is_active ? 'hidden from new scheduling' : 'available for scheduling again'}.`,
+      message: `${i.name} will be ${i.is_active ? 'marked as no longer active' : 'marked as active again'}.`,
       confirmLabel: i.is_active ? 'Deactivate' : 'Activate',
       danger: i.is_active,
       action: () =>
@@ -140,14 +104,25 @@ export default function Instructors() {
         ),
     });
 
-  const centreName = (id) => centres.find((c) => c.id === id)?.name || 'Unknown';
+  const setField = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
   return (
     <>
-      <PageHeader title="Instructors" description="Manage instructors, their centres and weekly availability.">
-        <Button onClick={() => setForm({ ...EMPTY })} disabled={centres.length === 0}>
+      <PageHeader title="Instructors" description="Contact details, rank and the classes each instructor is posted to.">
+        <input
+          type="search"
+          aria-label="Search instructors"
+          placeholder="Search name, email or phone"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className={`${inputClass} w-64`}
+        />
+        <div className="w-56">
+          <CentreSwitcher />
+        </div>
+        <Button onClick={() => setForm(EMPTY)}>
           <PlusIcon size={18} />
-          New instructor
+          Add instructor
         </Button>
       </PageHeader>
 
@@ -158,43 +133,59 @@ export default function Instructors() {
             <thead className="bg-muted text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th scope="col" className="px-4 py-3 font-medium">Name</th>
-                <th scope="col" className="px-4 py-3 font-medium">Rank</th>
-                <th scope="col" className="px-4 py-3 font-medium">Centres</th>
+                <th scope="col" className="px-4 py-3 font-medium">Contact</th>
+                <th scope="col" className="px-4 py-3 font-medium">Rank / qualifications</th>
+                <th scope="col" className="px-4 py-3 font-medium">Assigned classes</th>
                 <th scope="col" className="px-4 py-3 font-medium">Status</th>
                 <th scope="col" className="px-4 py-3 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {loading && <SkeletonRows rows={4} cols={5} />}
+              {loading && <SkeletonRows rows={4} cols={6} />}
               {!loading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={5}>
-                    <EmptyState icon={CalendarIcon} title="No instructors yet" hint="Add an instructor to assign classes." />
+                  <td colSpan={6}>
+                    <EmptyState
+                      icon={CalendarIcon}
+                      title="No instructors found"
+                      hint="Add an instructor, or change the search."
+                    />
                   </td>
                 </tr>
               )}
               {!loading &&
                 rows.map((i) => (
-                  <tr key={i.id} className="border-t transition-colors duration-200 hover:bg-muted/60">
+                  <tr key={i.id} className="border-t align-top transition-colors duration-200 hover:bg-muted/60">
                     <td className="px-4 py-3 font-medium">{i.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{i.rank_name || '-'}</td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {(i.centre_ids || []).map(centreName).join(', ') || '-'}
+                      <div>{i.email || '-'}</div>
+                      <div>{i.phone || '-'}</div>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      <div>{i.rank_name || '-'}</div>
+                      {i.qualifications && <div className="text-xs">{i.qualifications}</div>}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {/* classes is a JSON array built by the API: one line per class the instructor teaches */}
+                      {i.classes.length === 0
+                        ? 'None'
+                        : i.classes.map((c) => (
+                            <div key={c.id}>
+                              {c.centre_name}: {formatSlot(c)}
+                            </div>
+                          ))}
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge active={i.is_active} />
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
-                        <Button variant="secondary" onClick={() => openAvailability(i)}>
-                          Availability
-                        </Button>
                         <IconButton label={`Edit ${i.name}`} onClick={() => openEdit(i)}>
                           <PencilIcon size={18} />
                         </IconButton>
                         <IconButton
                           label={`${i.is_active ? 'Deactivate' : 'Activate'} ${i.name}`}
-                          tone={i.is_active ? 'danger' : 'default'}
+                          tone={i.is_active ? 'warning' : 'success'}
                           onClick={() => toggleActive(i)}
                         >
                           {i.is_active ? <ArchiveIcon size={18} /> : <RestoreIcon size={18} />}
@@ -212,21 +203,19 @@ export default function Instructors() {
         <Modal labelledBy="instructor-form-title" onClose={() => setForm(null)}>
           <form onSubmit={save} className="space-y-4">
             <h2 id="instructor-form-title" className="text-lg font-semibold">
-              {form.id ? 'Edit instructor' : 'New instructor'}
+              {form.id ? 'Edit instructor' : 'Add instructor'}
             </h2>
             <Field label="Name">
-              <input required maxLength={150} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} data-autofocus />
+              <input required maxLength={150} value={form.name} onChange={setField('name')} className={inputClass} data-autofocus />
             </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Email">
-                <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputClass} />
-              </Field>
-              <Field label="Phone">
-                <input maxLength={30} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputClass} />
-              </Field>
-            </div>
-            <Field label="Rank">
-              <select value={form.rank_id} onChange={(e) => setForm({ ...form, rank_id: e.target.value })} className={inputClass}>
+            <Field label="Email" optional>
+              <input type="email" value={form.email} onChange={setField('email')} className={inputClass} />
+            </Field>
+            <Field label="Phone" optional>
+              <input maxLength={30} value={form.phone} onChange={setField('phone')} className={inputClass} />
+            </Field>
+            <Field label="Rank" optional>
+              <select value={form.rank_id} onChange={setField('rank_id')} className={inputClass}>
                 <option value="">No rank</option>
                 {ranks.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -235,71 +224,15 @@ export default function Instructors() {
                 ))}
               </select>
             </Field>
-            <Field label="Qualifications">
-              <textarea rows={2} maxLength={500} value={form.qualifications} onChange={(e) => setForm({ ...form, qualifications: e.target.value })} className={inputClass} />
+            <Field label="Qualifications" optional>
+              <textarea maxLength={500} rows={3} value={form.qualifications} onChange={setField('qualifications')} className={`${inputClass} h-auto py-2`} />
             </Field>
-            <fieldset>
-              <legend className="mb-1.5 text-sm font-medium">Centres (select at least one)</legend>
-              <div className="flex flex-wrap gap-3">
-                {centres.map((c) => (
-                  <label key={c.id} className="inline-flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={form.centre_ids.includes(c.id)} onChange={() => toggleCentre(c.id)} className="size-4 accent-[var(--accent)]" />
-                    {c.name}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+            <p className="text-xs text-muted-foreground">Classes are assigned from the Classes page.</p>
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="secondary" onClick={() => setForm(null)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={form.centre_ids.length === 0}>
-                Save
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
-
-      {availFor && (
-        <Modal labelledBy="availability-title" onClose={() => setAvailFor(null)}>
-          <form onSubmit={saveAvailability} className="space-y-4">
-            <h2 id="availability-title" className="text-lg font-semibold">
-              Availability: {availFor.name}
-            </h2>
-            <p className="text-sm text-muted-foreground">Times are Singapore time. Each slot must end after it starts.</p>
-            {slots.length === 0 && <p className="text-sm text-muted-foreground">No slots yet.</p>}
-            {slots.map((s, idx) => (
-              <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2">
-                <Field label="Day">
-                  <select value={s.weekday} onChange={(e) => updateSlot(idx, 'weekday', e.target.value)} className={inputClass}>
-                    {WEEKDAYS.map((d, n) => (
-                      <option key={d} value={n}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="From">
-                  <input type="time" required value={s.start} onChange={(e) => updateSlot(idx, 'start', e.target.value)} className={inputClass} />
-                </Field>
-                <Field label="To">
-                  <input type="time" required value={s.end} onChange={(e) => updateSlot(idx, 'end', e.target.value)} className={inputClass} />
-                </Field>
-                <IconButton label="Remove slot" tone="danger" onClick={() => setSlots((l) => l.filter((_, i) => i !== idx))}>
-                  <XIcon size={18} />
-                </IconButton>
-              </div>
-            ))}
-            <Button variant="secondary" onClick={() => setSlots((l) => [...l, { weekday: 0, start: '09:00', end: '12:00' }])}>
-              <PlusIcon size={18} />
-              Add slot
-            </Button>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="secondary" onClick={() => setAvailFor(null)}>
-                Cancel
-              </Button>
-              <Button type="submit">Save availability</Button>
+              <Button type="submit">Save</Button>
             </div>
           </form>
         </Modal>

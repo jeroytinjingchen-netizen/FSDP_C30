@@ -1,3 +1,5 @@
+﻿// Login.jsx - the login page. Admins and students share one form; the tab chosen must match the account's role.
+// useState holds the form values; useNavigate moves to another page after a successful login.
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
@@ -20,7 +22,7 @@ export default function Login() {
   const [alert, setAlert] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  if (user?.role === 'ADMIN') return <Navigate to="/admin/centres" replace />;
+  if (user?.role === 'ADMIN') return <Navigate to="/admin/dashboard" replace />;
   if (user?.role === 'STUDENT') return <Navigate to="/student" replace />;
 
   const switchRole = (r) => {
@@ -41,7 +43,7 @@ export default function Login() {
         setAlert({ error: true, text: `Access denied. This account is registered as a ${data.role}. Please switch tabs.` });
       } else if (data.role === 'ADMIN') {
         login(data.user);
-        navigate('/admin/centres');
+        navigate('/admin/dashboard');
       } else {
         login(data.user);
         navigate('/student');
@@ -66,7 +68,7 @@ export default function Login() {
         </div>
         <div>
           <h1 className="max-w-md text-4xl font-semibold leading-tight tracking-tight">
-            One place to run every centre and venue.
+            One place to run every centre.
           </h1>
           <p className="mt-4 max-w-md text-sidebar-foreground">
             Centralised administrative workflow for centres, venues and students.
@@ -163,3 +165,4 @@ export default function Login() {
     </div>
   );
 }
+

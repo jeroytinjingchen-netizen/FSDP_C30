@@ -1,99 +1,75 @@
-// controllers/studentController.js - a student sees only their own profile and invoices.
-const billing = require('../model/billingModel');
+// controllers/studentController.js - the minimal student portal.
+// A student sees their own rank and package, buys a package, and records attendance.
+// A controller reads the request, calls the model or service, and sends the response.
 const portal = require('../model/studentPortalModel');
-const { createCheckoutForInvoice } = require('../services/stripeService');
+const { createCheckoutForPackage } = require('../services/stripeService');
 
+// UUIDs are the id format used by the database. Checking the shape stops bad input early.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// GET /api/student/me - the logged-in student's profile (set by the requireStudent middleware).
 function getMe(req, res) {
   return res.json({ student: req.student });
 }
 
-async function getMyBelt(req, res, next) {
+// GET /api/student/rank - the student's current rank.
+async function getMyRank(req, res, next) {
   try {
-    const belt = await portal.getBelt(req.student.id);
-    if (!belt) return res.status(404).json({ error: 'Belt record not found.' });
-    res.json(belt);
+    const rank = await portal.getRank(req.student.id);
+    if (!rank) return res.status(404).json({ error: 'Rank not found.' });
+    res.json(rank);
   } catch (err) {
     next(err);
   }
 }
 
-async function listMyTimetable(req, res, next) {
+// GET /api/student/packages - the packages on sale.
+async function listPackages(req, res, next) {
   try {
-    const allowed = [14, 30, 90];
-    const requested = Number(req.query.days) || 14;
-    const days = allowed.includes(requested) ? requested : 14;
-    const sessions = await portal.listUpcomingSessions(req.student.centre_id, days);
-    res.json(sessions);
+    res.json(await portal.listPackages());
   } catch (err) {
     next(err);
   }
 }
 
-const clean = (value, max) => {
-  if (value === undefined || value === null) return null;
-  const text = String(value).trim();
-  return text === '' ? null : text.slice(0, max);
-};
-
-async function updateMyContact(req, res, next) {
+// POST /api/student/packages/:id/checkout - starts a Stripe test-mode payment for a package.
+// The reply holds the Stripe URL the browser should open.
+async function checkoutPackage(req, res, next) {
   try {
-    const body = req.body || {};
-    const contact = {
-      phone: clean(body.phone, 30),
-      guardian_name: clean(body.guardian_name, 100),
-      guardian_phone: clean(body.guardian_phone, 30),
-    };
-    const updated = await portal.updateContact(req.student.id, contact);
-    if (!updated) return res.status(404).json({ error: 'Student profile not found.' });
-    res.json(updated);
-  } catch (err) {
-    next(err);
-  }
-}
-
-async function listMyInvoicePayments(req, res, next) {
-  try {
-    const invoice = await billing.findInvoice(req.params.id);
-    if (!invoice || invoice.student_id !== req.student.id) {
-      return res.status(404).json({ error: 'Invoice not found.' });
-    }
-    const payments = await billing.listPayments(invoice.id);
-    res.json({ invoice, payments });
-  } catch (err) {
-    next(err);
-  }
-}
-
-async function listMyInvoices(req, res, next) {
-  try {
-    const invoices = await billing.listInvoices({ studentId: req.student.id });
-    res.json(invoices);
-  } catch (err) {
-    next(err);
-  }
-}
-
-async function checkoutMyInvoice(req, res, next) {
-  try {
-    const invoice = await billing.findInvoice(req.params.id);
-    // Return the same 404 for other students' invoices so ids cannot be probed.
-    if (!invoice || invoice.student_id !== req.student.id) {
-      return res.status(404).json({ error: 'Invoice not found.' });
-    }
-    const result = await createCheckoutForInvoice(invoice.id, { returnPath: '/student' });
-    if (result.error === 'NO_BALANCE') return res.status(400).json({ error: 'Invoice has no outstanding balance.' });
+    if (!UUID_RE.test(req.params.id)) return res.status(404).json({ error: 'Package not found.' });
+    const pkg = await portal.findPackage(req.params.id);
+    if (!pkg) return res.status(404).json({ error: 'Package not found.' });
+    const result = await createCheckoutForPackage(req.student, pkg);
     res.json({ url: result.url, sessionId: result.sessionId });
   } catch (err) {
     next(err);
   }
 }
 
-module.exports = {
-  getMe,
-  getMyBelt,
-  listMyTimetable,
-  updateMyContact,
-  listMyInvoices,
-  listMyInvoicePayments,
-  checkoutMyInvoice,
-};
+// GET /api/student/package - the student's current package with sessions used and remaining.
+async function getMyPackage(req, res, next) {
+  try {
+    res.json({ package: await portal.getCurrentPackage(req.student.id) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// POST /api/student/attendance - the student records attending a class today.
+// Each attendance uses up one session of the package.
+async function recordAttendance(req, res, next) {
+  try {
+    const result = await portal.recordAttendance(req.student.id);
+    if (result.error === 'NO_ACTIVE_PACKAGE') {
+      return res.status(400).json({ error: 'You have no active package with sessions left.' });
+    }
+    if (result.error === 'ALREADY_RECORDED') {
+      return res.status(409).json({ error: 'Attendance is already recorded for today.' });
+    }
+    res.status(201).json({ package: await portal.getCurrentPackage(req.student.id) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { getMe, getMyRank, listPackages, checkoutPackage, getMyPackage, recordAttendance };

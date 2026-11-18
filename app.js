@@ -1,21 +1,22 @@
-// app.js
+﻿// app.js - the Express server. It wires up middleware, API routes and the built React app.
+// Express is the web framework: app.use(...) registers middleware and routers, app.listen(...) starts the server.
+
+// dotenv loads variables from the .env file into process.env (database URL, Stripe keys, ...).
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+
+// Each routes file maps URLs to controller functions for one area of the app.
 const authRoutes = require('./routes/auth');
 const centreRoutes = require('./routes/centres');
-const venueRoutes = require('./routes/venues');
-const termRoutes = require('./routes/terms');
 const instructorRoutes = require('./routes/instructors');
 const classRoutes = require('./routes/classes');
 const gradingRoutes = require('./routes/grading');
-const billingRoutes = require('./routes/billing');
+const paymentRoutes = require('./routes/payments');
 const lookupRoutes = require('./routes/lookups');
-const notificationRoutes = require('./routes/notifications');
 const dashboardRoutes = require('./routes/dashboard');
-const reportRoutes = require('./routes/reports');
 const studentRoutes = require('./routes/student');
-const { runReminders } = require('./services/reminderService');
+const adminStudentRoutes = require('./routes/adminStudents');
 const stripeController = require('./controllers/stripeController');
 
 const app = express();
@@ -25,26 +26,23 @@ const PORT = process.env.PORT || 3000;
 // It is public (no admin session) because Stripe calls it. The signature is the only check.
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), stripeController.webhook);
 
-// Middleware
-app.use(express.json());
+// Middleware: turn JSON and form request bodies into req.body.
+app.use(express.json({ limit: '1mb' })); // CSV uploads are sent as JSON text
 app.use(express.urlencoded({ extended: true }));
 
-// API Routes
+// API routes. Admin areas first, then the student portal.
 app.use('/api/auth', authRoutes);
 app.use('/api/centres', centreRoutes);
-app.use('/api/venues', venueRoutes);
-app.use('/api/terms', termRoutes);
 app.use('/api/instructors', instructorRoutes);
 app.use('/api/classes', classRoutes);
 app.use('/api/grading', gradingRoutes);
-app.use('/api/billing', billingRoutes);
+app.use('/api/payments', paymentRoutes);
 app.use('/api/lookups', lookupRoutes);
-app.use('/api/notifications', notificationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/reports', reportRoutes);
 app.use('/api/student', studentRoutes);
+app.use('/api/students', adminStudentRoutes);
 
-// Serve the built React app (public/dist) and fall back to index.html for client-side routes
+// Serve the built React app (public/dist) and fall back to index.html for client-side routes.
 const clientDist = path.join(__dirname, 'public', 'dist');
 app.use(express.static(clientDist));
 app.use((req, res, next) => {
@@ -55,12 +53,3 @@ app.use((req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
-
-// Daily reminder job. Dedupe keys in notification_log make repeated runs safe.
-// Set REMINDER_JOB=off to disable the timer and use the manual run endpoint only.
-if (process.env.REMINDER_JOB !== 'off') {
-  const DAY_MS = 24 * 60 * 60 * 1000;
-  setInterval(() => {
-    runReminders().catch((err) => console.error('Reminder job failed:', err.message));
-  }, DAY_MS).unref();
-}

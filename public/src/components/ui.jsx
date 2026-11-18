@@ -1,11 +1,16 @@
+// ui.jsx - small shared building blocks (buttons, fields, toast, modal) used by every page.
+import { AsciiSkeleton } from 'ascii-reveal';
 import { useEffect, useRef, useState } from 'react';
 import { AlertCircleIcon, CheckCircleIcon, XIcon } from './Icons.jsx';
 
+// cn joins class names and drops empty values, e.g. cn("a", false && "b") gives "a".
 export const cn = (...parts) => parts.filter(Boolean).join(' ');
 
+// inputClass: the shared Tailwind classes for text inputs and selects.
 export const inputClass =
   'h-10 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground transition-colors duration-200 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground';
 
+// variants: the colour classes for each Button style.
 const variants = {
   primary: 'bg-accent text-on-accent hover:bg-accent-hover',
   secondary: 'border border-input bg-card text-foreground hover:bg-muted',
@@ -13,6 +18,7 @@ const variants = {
   ghost: 'text-foreground hover:bg-muted',
 };
 
+// Button: a styled <button>. "...props" passes any other attribute (onClick, disabled) straight through.
 export function Button({ variant = 'primary', className, type = 'button', ...props }) {
   return (
     <button
@@ -27,6 +33,7 @@ export function Button({ variant = 'primary', className, type = 'button', ...pro
   );
 }
 
+// iconTones: hover colours for icon-only buttons.
 const iconTones = {
   default: 'text-muted-foreground hover:bg-muted hover:text-foreground',
   warning: 'text-muted-foreground hover:bg-warning-soft hover:text-warning',
@@ -34,6 +41,7 @@ const iconTones = {
   danger: 'text-muted-foreground hover:bg-destructive-soft hover:text-destructive',
 };
 
+// IconButton: a small square button holding an icon. "label" is its tooltip and screen-reader name.
 export function IconButton({ label, tone = 'default', className, children, ...props }) {
   return (
     <button
@@ -52,6 +60,7 @@ export function IconButton({ label, tone = 'default', className, children, ...pr
   );
 }
 
+// Field: wraps an input with a text label. Clicking the label focuses the input.
 export function Field({ label, optional, children }) {
   return (
     <label className="block">
@@ -64,6 +73,7 @@ export function Field({ label, optional, children }) {
   );
 }
 
+// StatusBadge: a green "Active" or grey "Archived" pill.
 export function StatusBadge({ active }) {
   return (
     <span
@@ -81,6 +91,7 @@ export function StatusBadge({ active }) {
   );
 }
 
+// PageHeader: the page title, optional description, and a slot for buttons or filters (children).
 export function PageHeader({ title, description, children }) {
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -93,6 +104,7 @@ export function PageHeader({ title, description, children }) {
   );
 }
 
+// EmptyState: shown when a list has no rows. "icon: Icon" renames the prop so it can be used as a component.
 export function EmptyState({ icon: Icon, title, hint, action }) {
   return (
     <div className="flex flex-col items-center gap-3 px-4 py-14 text-center">
@@ -108,19 +120,22 @@ export function EmptyState({ icon: Icon, title, hint, action }) {
   );
 }
 
+// SkeletonRows: placeholder table rows shown while data loads. Array.from builds a rows x cols grid.
 export function SkeletonRows({ rows = 4, cols }) {
   return Array.from({ length: rows }, (_, r) => (
     <tr key={r} className="border-t" aria-hidden="true">
       {Array.from({ length: cols }, (_, c) => (
         <td key={c} className="px-4 py-4">
-          <div className="h-4 animate-pulse rounded bg-muted" style={{ width: `${55 + ((r + c) % 3) * 15}%` }} />
+          <AsciiSkeleton variant="dither" lines={1} seed={r * cols + c} widths={[`${55 + ((r + c) % 3) * 15}%`]} />
         </td>
       ))}
     </tr>
   ));
 }
 
+// Toast: a pop-up message (alert = { error, text }) that hides itself after 5 seconds.
 export function Toast({ alert, onDismiss }) {
+  // A ref keeps the latest onDismiss without restarting the timer when the parent re-renders.
   const dismissRef = useRef(onDismiss);
   useEffect(() => {
     dismissRef.current = onDismiss;
@@ -128,6 +143,7 @@ export function Toast({ alert, onDismiss }) {
 
   useEffect(() => {
     if (!alert) return;
+    // setTimeout starts the 5-second timer; the returned function clears it if the toast changes or closes.
     const t = setTimeout(() => dismissRef.current(), 5000);
     return () => clearTimeout(t);
   }, [alert]);
@@ -160,9 +176,12 @@ export function Toast({ alert, onDismiss }) {
   );
 }
 
+// FOCUSABLE: a CSS selector for everything the keyboard can focus. Used to keep Tab inside the dialog.
 const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
+// Modal: an accessible dialog. It locks page scroll, focuses the first field, closes on Escape or a click outside,
+// keeps Tab inside the dialog, and returns focus to the previous element when closed.
 export function Modal({ labelledBy, onClose, children, className }) {
   const panelRef = useRef(null);
   const closeRef = useRef(onClose);
@@ -182,6 +201,7 @@ export function Modal({ labelledBy, onClose, children, className }) {
         closeRef.current();
         return;
       }
+      // Focus trap: Tab on the last item wraps to the first, and Shift+Tab on the first wraps to the last.
       if (e.key !== 'Tab') return;
       const items = panel.querySelectorAll(FOCUSABLE);
       if (!items.length) return;
@@ -222,6 +242,7 @@ export function Modal({ labelledBy, onClose, children, className }) {
   );
 }
 
+// ConfirmDialog: a Modal that asks the user to confirm an action (for example archive or delete).
 export function ConfirmDialog({ title, message, confirmLabel, danger, onConfirm, onCancel }) {
   return (
     <Modal labelledBy="confirm-title" onClose={onCancel}>
