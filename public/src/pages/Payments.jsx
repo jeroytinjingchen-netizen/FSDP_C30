@@ -149,6 +149,32 @@ export default function Payments() {
         </div>
       </section>
 
+      {/* Explains the reference format, for example ST-5S-20261118-00004. Codes match migration 004. */}
+      <section aria-label="Reference number legend" className="mb-4 rounded-xl border bg-card p-4 text-sm">
+        <h2 className="mb-2 font-medium">Reference number format</h2>
+        <p className="mb-3 font-mono text-xs text-muted-foreground">METHOD-SESSIONS-DATE-NUMBER, for example ST-5S-20261118-00004</p>
+        <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <dt className="font-medium">METHOD</dt>
+            <dd className="text-muted-foreground">
+              BT = bank transfer, C = cash, ST = Stripe, WA = WhatsApp, EM = email, OT = other
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium">SESSIONS</dt>
+            <dd className="text-muted-foreground">Sessions in the linked package, for example 5S = 5 sessions. NP = no package linked.</dd>
+          </div>
+          <div>
+            <dt className="font-medium">DATE</dt>
+            <dd className="text-muted-foreground">Payment date in Singapore time, as YYYYMMDD, for example 20261118 = 18 Nov 2026.</dd>
+          </div>
+          <div>
+            <dt className="font-medium">NUMBER</dt>
+            <dd className="text-muted-foreground">A running counter across all payments. It never resets.</dd>
+          </div>
+        </dl>
+      </section>
+
       <div className="overflow-hidden rounded-xl border bg-card">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">

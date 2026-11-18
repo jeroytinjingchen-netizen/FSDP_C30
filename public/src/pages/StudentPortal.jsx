@@ -16,6 +16,7 @@ export default function StudentPortal() {
   const [current, setCurrent] = useState(null); // the student's current package, or null
   const [busy, setBusy] = useState(null); // id of the package being paid for, or 'attendance'
   const [alert, setAlert] = useState(null);
+  const [verified, setVerified] = useState(null); // null while checking, then true or false
 
   // Loads rank, packages on sale and the current package in parallel.
   const load = useCallback(async () => {
@@ -43,8 +44,17 @@ export default function StudentPortal() {
     return () => clearTimeout(timer);
   }, [searchParams, load]);
 
-  // Only logged-in students may see this page.
-  if (!user || user.role !== 'STUDENT') return <Navigate to="/" replace />;
+  // Asks the server who holds the session cookie. The browser's stored user can be stale, for example
+  // after an admin login in another tab, so it is not trusted for this check.
+  useEffect(() => {
+    api('/api/student/me')
+      .then(() => setVerified(true))
+      .catch(() => setVerified(false));
+  }, []);
+
+  // Only a verified student session may see this page. null means the check is still running.
+  if (verified === false) return <Navigate to="/" replace />;
+  if (verified === null) return null;
 
   // Creates a Stripe checkout for the package and sends the browser to Stripe's payment page.
   async function buy(pkg) {
