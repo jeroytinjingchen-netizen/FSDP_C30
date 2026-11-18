@@ -121,28 +121,28 @@ export default function Payments() {
         </div>
       </section>
 
-      <section aria-label="Filters" className="mb-4 grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted-foreground">Reference number</span>
-          <input type="search" value={filters.search} onChange={setField('search')} placeholder="Search reference" className={inputClass} />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted-foreground">Status</span>
-          <select value={filters.status} onChange={setField('status')} className={inputClass}>
-            <option value="">All</option>
-            <option value="SUCCESSFUL">Successful</option>
-            <option value="FAILED">Failed</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted-foreground">Payment date from</span>
-          <input type="date" value={filters.paymentFrom} onChange={setField('paymentFrom')} className={inputClass} />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted-foreground">Payment date to</span>
-          <input type="date" value={filters.paymentTo} onChange={setField('paymentTo')} className={inputClass} />
-        </label>
-        <div className="flex items-end">
+      <section aria-label="Filters" className="mb-4 rounded-xl border bg-card p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-muted-foreground">Reference / student</span>
+            <input type="search" value={filters.search} onChange={setField('search')} placeholder="Search reference" className={inputClass} style={{ width: '180px' }} />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-muted-foreground">Status</span>
+            <select value={filters.status} onChange={setField('status')} className={inputClass} style={{ width: '140px' }}>
+              <option value="">All statuses</option>
+              <option value="SUCCESSFUL">Successful</option>
+              <option value="FAILED">Failed</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-muted-foreground">Date from</span>
+            <input type="date" value={filters.paymentFrom} onChange={setField('paymentFrom')} className={inputClass} style={{ width: '150px' }} />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-muted-foreground">Date to</span>
+            <input type="date" value={filters.paymentTo} onChange={setField('paymentTo')} className={inputClass} style={{ width: '150px' }} />
+          </label>
           <Button variant="secondary" onClick={() => setFilters(EMPTY_FILTERS)} disabled={!hasFilters}>
             Clear filters
           </Button>

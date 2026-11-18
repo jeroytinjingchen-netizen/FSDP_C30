@@ -5,6 +5,7 @@ import Centres from './pages/Centres.jsx';
 import Classes from './pages/Classes.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Grading from './pages/Grading.jsx';
+import GradingDetail from './pages/GradingDetail.jsx';
 import Instructors from './pages/Instructors.jsx';
 import Students from './pages/Students.jsx';
 import Login from './pages/Login.jsx';
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="instructors" element={<Instructors />} />
         <Route path="students" element={<Students />} />
         <Route path="grading" element={<Grading />} />
+        <Route path="grading/:id" element={<GradingDetail />} />
         <Route path="payments" element={<Payments />} />
       </Route>
 
