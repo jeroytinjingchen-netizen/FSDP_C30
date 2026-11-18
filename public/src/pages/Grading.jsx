@@ -267,7 +267,7 @@ export default function Grading() {
               <tr>
                 <th scope="col" className="px-4 py-3 font-medium">Date</th>
                 <th scope="col" className="px-4 py-3 font-medium">Grading</th>
-                <th scope="col" className="px-4 py-3 font-medium">Venue</th>
+                <th scope="col" className="px-4 py-3 font-medium">Centre</th>
                 <th scope="col" className="px-4 py-3 font-medium">Students</th>
                 <th scope="col" className="px-4 py-3 font-medium">Graded</th>
                 <th scope="col" className="px-4 py-3 font-medium">Not graded</th>

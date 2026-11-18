@@ -1,8 +1,6 @@
-// scripts/sampleData.js - sample centres, instructors, students, classes, invoices and grading.
+// scripts/sampleData.js - sample centres, instructors, students, classes and grading.
 // Called from scripts/seed.js. Inserts are idempotent so the seed can run more than once.
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-const TZ = '+08:00';
+// Note: venues, terms, invoices and fee_items have been removed from the schema.
 
 const BISHAN = 'Shinjukai Bishan Centre';
 const JURONG = 'Shinjukai Jurong Centre';
@@ -10,62 +8,46 @@ const JURONG = 'Shinjukai Jurong Centre';
 // Children's intermediate grades (Blue-Silver, Brown-Silver, Black-Silver) and Junior Dan are included.
 // rank_order is unique, so the seed first moves existing orders out of the way before upserting.
 const RANKS = [
-  { name: '12th Kyu', order: 1, colour: 'Red' },
-  { name: '11th Kyu', order: 2, colour: 'Red-Gold' },
-  { name: '10th Kyu', order: 3, colour: 'Yellow' },
-  { name: '9th Kyu', order: 4, colour: 'Orange' },
-  { name: '8th Kyu', order: 5, colour: 'Green' },
-  { name: '7th Kyu', order: 6, colour: 'Purple' },
-  { name: '6th Kyu', order: 7, colour: 'Blue' },
-  { name: 'Blue-Silver', order: 8, colour: 'Blue-Silver' },
-  { name: '5th Kyu', order: 9, colour: 'Blue-Gold' },
-  { name: '4th Kyu', order: 10, colour: 'Brown' },
-  { name: 'Brown-Silver', order: 11, colour: 'Brown-Silver' },
-  { name: '3rd Kyu', order: 12, colour: 'Brown-Gold' },
-  { name: '2nd Kyu', order: 13, colour: 'Black' },
-  { name: 'Black-Silver', order: 14, colour: 'Black-Silver' },
-  { name: '1st Kyu', order: 15, colour: 'Black-Gold' },
-  { name: 'Junior Dan', order: 16, colour: 'Black' },
-  { name: '1st Dan', order: 17, colour: 'Black' },
-  { name: '2nd Dan', order: 18, colour: 'Black' },
-  { name: '3rd Dan', order: 19, colour: 'Black' },
-  { name: '4th Dan', order: 20, colour: 'Black' },
-  { name: '5th Dan', order: 21, colour: 'Black' },
-  { name: '6th Dan', order: 22, colour: 'Black' },
-  { name: '7th Dan', order: 23, colour: 'Black' },
+  { name: '12th Kyu',    order: 1,  colour: 'Red' },
+  { name: '11th Kyu',    order: 2,  colour: 'Red-Gold' },
+  { name: '10th Kyu',    order: 3,  colour: 'Yellow' },
+  { name: '9th Kyu',     order: 4,  colour: 'Orange' },
+  { name: '8th Kyu',     order: 5,  colour: 'Green' },
+  { name: '7th Kyu',     order: 6,  colour: 'Purple' },
+  { name: '6th Kyu',     order: 7,  colour: 'Blue' },
+  { name: 'Blue-Silver', order: 8,  colour: 'Blue-Silver' },
+  { name: '5th Kyu',     order: 9,  colour: 'Blue-Gold' },
+  { name: '4th Kyu',     order: 10, colour: 'Brown' },
+  { name: 'Brown-Silver',order: 11, colour: 'Brown-Silver' },
+  { name: '3rd Kyu',     order: 12, colour: 'Brown-Gold' },
+  { name: '2nd Kyu',     order: 13, colour: 'Black' },
+  { name: 'Black-Silver',order: 14, colour: 'Black-Silver' },
+  { name: '1st Kyu',     order: 15, colour: 'Black-Gold' },
+  { name: 'Junior Dan',  order: 16, colour: 'Black' },
+  { name: '1st Dan',     order: 17, colour: 'Black' },
+  { name: '2nd Dan',     order: 18, colour: 'Black' },
+  { name: '3rd Dan',     order: 19, colour: 'Black' },
+  { name: '4th Dan',     order: 20, colour: 'Black' },
+  { name: '5th Dan',     order: 21, colour: 'Black' },
+  { name: '6th Dan',     order: 22, colour: 'Black' },
+  { name: '7th Dan',     order: 23, colour: 'Black' },
 ];
 
 const CENTRES = [
-  { name: BISHAN, address: '1 Bishan Street 10, Singapore', email: 'bishan@aikidoshinjukai.com', phone: '+65 6000 1001' },
-  { name: JURONG, address: '2 Jurong East Street 21, Singapore', email: 'jurong@aikidoshinjukai.com', phone: '+65 6000 1002' },
-  { name: 'ASK Headquarters Dojo' },
-  { name: 'Marine Parade Dojo' },
-  { name: 'Rivervale Dojo' },
-  { name: 'Tampines West Dojo' },
-  { name: 'Thomson Dojo' },
-  { name: 'Bukit Timah Dojo' },
-  { name: 'SMU Dojo' },
-  { name: 'Siglap South Dojo' },
+  { name: BISHAN,                  address: '1 Bishan Street 10, Singapore',                    email: 'bishan@aikidoshinjukai.com', phone: '+65 6000 1001' },
+  { name: JURONG,                  address: '2 Jurong East Street 21, Singapore',                email: 'jurong@aikidoshinjukai.com', phone: '+65 6000 1002' },
+  { name: 'ASK Headquarters Dojo', address: 'Thomson V One, 9 Sin Ming Road, #B1-02, Singapore 575630' },
+  { name: 'Marine Parade Dojo',    address: '278 Marine Parade Road, Singapore 449282' },
+  { name: 'Rivervale Dojo',        address: '2 Rivervale Close, Singapore 544583' },
+  { name: 'Tampines West Dojo',    address: '5 Tampines Avenue 3, Singapore 529705' },
+  { name: 'Thomson Dojo',          address: '194 Upper Thomson Road, Singapore 574339' },
+  { name: 'Bukit Timah Dojo',      address: '20 Toh Yi Drive, Singapore 596569' },
+  { name: 'SMU Dojo',              address: '81 Victoria Street, Singapore 188065' },
+  { name: 'Siglap South Dojo',     address: '6 Palm Road, Singapore 456441' },
 ];
 
-const VENUES = {
-  [BISHAN]: [
-    { name: 'Main Dojo', capacity: 40 },
-    { name: 'Studio 2', capacity: 20 },
-  ],
-  [JURONG]: [{ name: 'Main Dojo', capacity: 35 }],
-  'ASK Headquarters Dojo': [{ name: 'Main Dojo', capacity: 30 }],
-  'Marine Parade Dojo': [{ name: 'Main Dojo', capacity: 30 }],
-  'Rivervale Dojo': [{ name: 'Main Dojo', capacity: 30 }],
-  'Tampines West Dojo': [{ name: 'Main Dojo', capacity: 30 }],
-  'Thomson Dojo': [{ name: 'Main Dojo', capacity: 30 }],
-  'Bukit Timah Dojo': [{ name: 'Main Dojo', capacity: 30 }],
-  'SMU Dojo': [{ name: 'Main Dojo', capacity: 30 }],
-  'Siglap South Dojo': [{ name: 'Main Dojo', capacity: 30 }],
-};
-
-// availability: [weekday, startMinute, endMinute]
-// unavailable: [date, reason]
+// availability: [weekday, startMinute, endMinute]  (weekday 0=Monday … 6=Sunday)
+// unavailable:  [date, reason]
 const INSTRUCTORS = [
   {
     name: 'Tan Wei Ming',
@@ -159,46 +141,39 @@ const INSTRUCTORS = [
   },
 ];
 
-const TERM = { name: 'Term 4 2026', start: '2026-10-05', end: '2026-12-20' };
-
-// minutes from midnight; weekday 0 = Sunday
+// All classes are 60 minutes. start and end are minutes from midnight.
+// weekday: 0=Monday … 6=Sunday. centre_id is set via centreId lookup.
 const CLASSES = [
-  { centre: BISHAN, venue: 'Main Dojo', name: 'Beginners Aikido', weekday: 2, start: 1140, end: 1200, level: '6th Kyu', instructors: ['Tan Wei Ming'] },
-  { centre: BISHAN, venue: 'Main Dojo', name: 'Intermediate Aikido', weekday: 4, start: 1170, end: 1260, level: '4th Kyu', instructors: ['Tan Wei Ming'] },
-  { centre: BISHAN, venue: 'Studio 2', name: 'Kids Aikido', weekday: 6, start: 540, end: 600, level: '6th Kyu', instructors: ['Aiko Yamada'] },
-  { centre: JURONG, venue: 'Main Dojo', name: 'Beginners Aikido', weekday: 2, start: 1140, end: 1200, level: '6th Kyu', instructors: ['Rahim Abdullah'] },
-  { centre: JURONG, venue: 'Main Dojo', name: 'Weekend Aikido', weekday: 6, start: 600, end: 690, level: '3rd Kyu', instructors: ['Rahim Abdullah'] },
+  { centre: BISHAN,                  name: 'Beginners Aikido',   weekday: 2, start: 1140, end: 1200, instructor: 'Tan Wei Ming' },
+  { centre: BISHAN,                  name: 'Intermediate Aikido',weekday: 4, start: 1170, end: 1230, instructor: 'Tan Wei Ming' },
+  { centre: BISHAN,                  name: 'Kids Aikido',        weekday: 6, start:  540, end:  600, instructor: 'Aiko Yamada' },
+  { centre: JURONG,                  name: 'Beginners Aikido',   weekday: 2, start: 1140, end: 1200, instructor: 'Rahim Abdullah' },
+  { centre: JURONG,                  name: 'Weekend Aikido',     weekday: 6, start:  600, end:  660, instructor: 'Rahim Abdullah' },
+  { centre: 'ASK Headquarters Dojo', name: 'Adult Aikido',       weekday: 5, start:  600, end:  660, instructor: 'Kenji Sato' },
+  { centre: 'Marine Parade Dojo',    name: 'Beginners Aikido',   weekday: 5, start:  600, end:  660, instructor: 'Siti Aminah' },
+  { centre: 'Rivervale Dojo',        name: 'Teens Aikido',       weekday: 3, start: 1080, end: 1140, instructor: 'Siti Aminah' },
+  { centre: 'Tampines West Dojo',    name: 'Beginners Aikido',   weekday: 5, start:  840, end:  900, instructor: 'Lucas Wong' },
+  { centre: 'Thomson Dojo',          name: 'Adult Aikido',       weekday: 4, start: 1170, end: 1230, instructor: 'Priya Nair' },
+  { centre: 'Bukit Timah Dojo',      name: 'Adult Aikido',       weekday: 2, start: 1140, end: 1200, instructor: 'Priya Nair' },
+  { centre: 'SMU Dojo',              name: 'University Aikido',  weekday: 1, start: 1140, end: 1200, instructor: 'Marcus Chua' },
+  { centre: 'Siglap South Dojo',     name: 'Kids Aikido',        weekday: 6, start:  540, end:  600, instructor: 'Hannah Lee' },
 ];
 
 const STUDENTS = [
-  { first: 'Alice', last: 'Tan', email: 'alice.tan@example.com', centre: BISHAN, rank: '5th Kyu', phone: '+65 9123 4001', dob: '2012-04-18', guardian: 'Tan Mei Ling', guardianPhone: '+65 9123 4100' },
-  { first: 'Benjamin', last: 'Lim', email: 'ben.lim@example.com', centre: BISHAN, rank: '4th Kyu', phone: '+65 9123 4002', dob: '1995-07-02' },
-  { first: 'Chloe', last: 'Ng', email: 'chloe.ng@example.com', centre: BISHAN, rank: '6th Kyu', phone: '+65 9123 4003', dob: '2001-11-30' },
-  { first: 'Daniel', last: 'Ong', email: 'daniel.ong@example.com', centre: JURONG, rank: '3rd Kyu', phone: '+65 9123 4004', dob: '1988-03-14' },
-  { first: 'Eliza', last: 'Koh', email: 'eliza.koh@example.com', centre: JURONG, rank: '9th Kyu', phone: null, dob: '2015-09-09', guardian: 'Koh Hwee Ling', guardianPhone: '+65 9123 4200' },
-  { first: 'Farid', last: 'Ismail', email: 'farid.ismail@example.com', centre: JURONG, rank: '2nd Kyu', phone: '+65 9123 4005', dob: '1992-01-21' },
-];
-
-const TUITION = {
-  name: 'Term 4 2026 Tuition',
-  description: 'Term fee, 12 weeks of classes',
-  amountCents: 18000,
-  dueDate: '2026-10-15',
-};
-
-// Demo payments. invoiceStatus mirrors the payment total against the invoice amount.
-const PAYMENTS = [
-  { email: 'alice.tan@example.com', amountCents: 18000, channel: 'BANK_TRANSFER', reference: 'FAST-88312', paidAt: '2026-10-03T09:15:00+08:00', invoiceStatus: 'PAID', invoicePaidAt: '2026-10-03T09:15:00+08:00' },
-  { email: 'ben.lim@example.com', amountCents: 10000, channel: 'CASH', reference: null, paidAt: '2026-10-10T19:30:00+08:00', invoiceStatus: 'PARTIALLY_PAID', invoicePaidAt: null },
+  { first: 'Alice',    last: 'Tan',    email: 'alice.tan@example.com',    centre: BISHAN, rank: '5th Kyu', phone: '+65 9123 4001', dob: '2012-04-18', guardian: 'Tan Mei Ling',  guardianPhone: '+65 9123 4100' },
+  { first: 'Benjamin', last: 'Lim',    email: 'ben.lim@example.com',       centre: BISHAN, rank: '4th Kyu', phone: '+65 9123 4002', dob: '1995-07-02' },
+  { first: 'Chloe',   last: 'Ng',     email: 'chloe.ng@example.com',      centre: BISHAN, rank: '6th Kyu', phone: '+65 9123 4003', dob: '2001-11-30' },
+  { first: 'Daniel',  last: 'Ong',    email: 'daniel.ong@example.com',    centre: JURONG, rank: '3rd Kyu', phone: '+65 9123 4004', dob: '1988-03-14' },
+  { first: 'Eliza',   last: 'Koh',    email: 'eliza.koh@example.com',     centre: JURONG, rank: '9th Kyu', phone: null,            dob: '2015-09-09', guardian: 'Koh Hwee Ling', guardianPhone: '+65 9123 4200' },
+  { first: 'Farid',   last: 'Ismail', email: 'farid.ismail@example.com',  centre: JURONG, rank: '2nd Kyu', phone: '+65 9123 4005', dob: '1992-01-21' },
 ];
 
 const GRADINGS = [
   {
     centre: BISHAN,
     title: 'Mass Grading - Bishan (Dec 2026)',
-    venue: 'Main Dojo',
     starts: '2026-12-06T10:00:00+08:00',
-    ends: '2026-12-06T13:00:00+08:00',
+    ends:   '2026-12-06T13:00:00+08:00',
     ranksTested: ['6th Kyu', '5th Kyu'],
     examiners: ['Tan Wei Ming'],
     candidates: ['alice.tan@example.com', 'chloe.ng@example.com'],
@@ -206,12 +181,11 @@ const GRADINGS = [
   {
     centre: JURONG,
     title: 'Mass Grading - Jurong (Dec 2026)',
-    venue: 'Main Dojo',
     starts: '2026-12-13T10:00:00+08:00',
-    ends: '2026-12-13T13:00:00+08:00',
+    ends:   '2026-12-13T13:00:00+08:00',
     ranksTested: ['2nd Kyu'],
     examiners: ['Rahim Abdullah'],
-    candidates: ['farid.ismail@example.com'],
+    candidates: ['farid.ismail@example.com', 'eliza.koh@example.com'],
   },
 ];
 
@@ -222,23 +196,8 @@ async function findOrInsert(client, selectSql, selectParams, insertSql, insertPa
   return created.rows[0].id;
 }
 
-function datesOnWeekday(startStr, endStr, weekday) {
-  const dates = [];
-  const end = Date.parse(`${endStr}T00:00:00Z`);
-  for (let t = Date.parse(`${startStr}T00:00:00Z`); t <= end; t += DAY_MS) {
-    const d = new Date(t);
-    if (d.getUTCDay() === weekday) dates.push(d.toISOString().slice(0, 10));
-  }
-  return dates;
-}
-
-function sessionTimestamp(dateStr, minute) {
-  const hh = String(Math.floor(minute / 60)).padStart(2, '0');
-  const mm = String(minute % 60).padStart(2, '0');
-  return `${dateStr}T${hh}:${mm}:00${TZ}`;
-}
-
 async function seedSampleData(client) {
+  // Ranks
   await client.query('UPDATE ranks SET rank_order = -1000 - rank_order');
   const rankId = {};
   for (const r of RANKS) {
@@ -251,30 +210,19 @@ async function seedSampleData(client) {
     rankId[r.name] = rows[0].id;
   }
 
+  // Centres
   const centreId = {};
   for (const c of CENTRES) {
     const { rows } = await client.query(
       `INSERT INTO centres (name, address, email, phone) VALUES ($1, $2, $3, $4)
        ON CONFLICT (name) DO UPDATE SET address = EXCLUDED.address, email = EXCLUDED.email, phone = EXCLUDED.phone
        RETURNING id`,
-      [c.name, c.address, c.email, c.phone]
+      [c.name, c.address, c.email || null, c.phone || null]
     );
     centreId[c.name] = rows[0].id;
   }
 
-  const venueId = {};
-  for (const [centreName, venues] of Object.entries(VENUES)) {
-    for (const v of venues) {
-      const { rows } = await client.query(
-        `INSERT INTO venues (centre_id, name, capacity) VALUES ($1, $2, $3)
-         ON CONFLICT (centre_id, name) DO UPDATE SET capacity = EXCLUDED.capacity
-         RETURNING id`,
-        [centreId[centreName], v.name, v.capacity]
-      );
-      venueId[`${centreName}|${v.name}`] = rows[0].id;
-    }
-  }
-
+  // Instructors
   const instructorId = {};
   for (const i of INSTRUCTORS) {
     instructorId[i.name] = await findOrInsert(
@@ -291,10 +239,10 @@ async function seedSampleData(client) {
         [instructorId[i.name], centreId[c]]
       );
     }
-    const { rows: hasAvailability } = await client.query(
+    const { rows: hasAvail } = await client.query(
       'SELECT 1 FROM instructor_availability WHERE instructor_id = $1 LIMIT 1', [instructorId[i.name]]
     );
-    if (!hasAvailability.length) {
+    if (!hasAvail.length) {
       for (const [weekday, start, end] of i.availability) {
         await client.query(
           `INSERT INTO instructor_availability (instructor_id, weekday, start_minute, end_minute)
@@ -312,55 +260,23 @@ async function seedSampleData(client) {
     }
   }
 
-  const termId = {};
-  for (const c of CENTRES) {
-    termId[c.name] = await findOrInsert(
-      client,
-      'SELECT id FROM terms WHERE centre_id = $1 AND name = $2', [centreId[c.name], TERM.name],
-      `INSERT INTO terms (centre_id, name, start_date, end_date) VALUES ($1, $2, $3, $4) RETURNING id`,
-      [centreId[c.name], TERM.name, TERM.start, TERM.end]
-    );
-  }
-
-  const now = new Date();
+  // Classes (60-minute class templates)
   for (const cls of CLASSES) {
-    const templateId = await findOrInsert(
-      client,
-      'SELECT id FROM class_templates WHERE term_id = $1 AND name = $2 AND weekday = $3',
-      [termId[cls.centre], cls.name, cls.weekday],
-      `INSERT INTO class_templates (term_id, venue_id, level_rank_id, name, weekday, start_minute, end_minute)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [termId[cls.centre], venueId[`${cls.centre}|${cls.venue}`], rankId[cls.level], cls.name, cls.weekday, cls.start, cls.end]
+    const { rows } = await client.query(
+      `INSERT INTO class_templates (centre_id, instructor_id, name, weekday, start_minute, end_minute)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (centre_id, name, weekday) DO UPDATE
+         SET instructor_id = EXCLUDED.instructor_id, start_minute = EXCLUDED.start_minute, end_minute = EXCLUDED.end_minute
+       RETURNING id`,
+      [centreId[cls.centre], instructorId[cls.instructor], cls.name, cls.weekday, cls.start, cls.end]
     );
-    for (const name of cls.instructors) {
-      await client.query(
-        'INSERT INTO class_template_instructors (template_id, instructor_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-        [templateId, instructorId[name]]
-      );
-    }
-
-    for (const dateStr of datesOnWeekday(TERM.start, TERM.end, cls.weekday)) {
-      const startsAt = sessionTimestamp(dateStr, cls.start);
-      const endsAt = sessionTimestamp(dateStr, cls.end);
-      const status = new Date(endsAt) < now ? 'COMPLETED' : 'SCHEDULED';
-      await client.query(
-        `INSERT INTO class_sessions (template_id, venue_id, starts_at, ends_at, status)
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (template_id, starts_at) DO NOTHING`,
-        [templateId, venueId[`${cls.centre}|${cls.venue}`], startsAt, endsAt, status]
-      );
-      const { rows } = await client.query(
-        'SELECT id FROM class_sessions WHERE template_id = $1 AND starts_at = $2', [templateId, startsAt]
-      );
-      await client.query(
-        `INSERT INTO class_session_instructors (session_id, instructor_id)
-         SELECT $1::uuid, instructor_id FROM class_template_instructors WHERE template_id = $2::uuid
-         ON CONFLICT DO NOTHING`,
-        [rows[0].id, templateId]
-      );
-    }
+    await client.query(
+      `INSERT INTO class_template_instructors (template_id, instructor_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [rows[0].id, instructorId[cls.instructor]]
+    );
   }
 
+  // Students
   const studentId = {};
   for (const s of STUDENTS) {
     const { rows } = await client.query(
@@ -373,58 +289,20 @@ async function seedSampleData(client) {
          date_of_birth = EXCLUDED.date_of_birth, guardian_name = EXCLUDED.guardian_name,
          guardian_phone = EXCLUDED.guardian_phone
        RETURNING id`,
-      [centreId[s.centre], rankId[s.rank], s.first, s.last, s.email, s.phone,
+      [centreId[s.centre], rankId[s.rank], s.first, s.last, s.email, s.phone || null,
        s.dob, s.guardian || null, s.guardianPhone || null]
     );
     studentId[s.email] = rows[0].id;
   }
 
-  const feeId = {};
-  for (const c of CENTRES) {
-    feeId[c.name] = await findOrInsert(
-      client,
-      'SELECT id FROM fee_items WHERE centre_id = $1 AND term_id = $2 AND name = $3',
-      [centreId[c.name], termId[c.name], TUITION.name],
-      `INSERT INTO fee_items (centre_id, term_id, name, description, amount_cents, due_date)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-      [centreId[c.name], termId[c.name], TUITION.name, TUITION.description, TUITION.amountCents, TUITION.dueDate]
-    );
-  }
-
-  const invoiceId = {};
-  for (const s of STUDENTS) {
-    invoiceId[s.email] = await findOrInsert(
-      client,
-      'SELECT id FROM invoices WHERE student_id = $1 AND fee_item_id = $2',
-      [studentId[s.email], feeId[s.centre]],
-      `INSERT INTO invoices (student_id, fee_item_id, description, amount_cents, due_date)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [studentId[s.email], feeId[s.centre], TUITION.name, TUITION.amountCents, TUITION.dueDate]
-    );
-  }
-
-  for (const p of PAYMENTS) {
-    const invId = invoiceId[p.email];
-    const { rows: existing } = await client.query('SELECT 1 FROM payments WHERE invoice_id = $1 LIMIT 1', [invId]);
-    if (existing.length) continue;
-    await client.query(
-      `INSERT INTO payments (invoice_id, amount_cents, channel, status, paid_at, reference)
-       VALUES ($1, $2, $3, 'COMPLETED', $4, $5)`,
-      [invId, p.amountCents, p.channel, p.paidAt, p.reference]
-    );
-    await client.query(
-      'UPDATE invoices SET status = $2, paid_at = $3 WHERE id = $1',
-      [invId, p.invoiceStatus, p.invoicePaidAt]
-    );
-  }
-
+  // Grading sessions
   for (const g of GRADINGS) {
     const gradingId = await findOrInsert(
       client,
       'SELECT id FROM grading_sessions WHERE centre_id = $1 AND title = $2', [centreId[g.centre], g.title],
-      `INSERT INTO grading_sessions (centre_id, venue_id, type, title, starts_at, ends_at)
-       VALUES ($1, $2, 'MASS', $3, $4, $5) RETURNING id`,
-      [centreId[g.centre], venueId[`${g.centre}|${g.venue}`], g.title, g.starts, g.ends]
+      `INSERT INTO grading_sessions (centre_id, type, title, starts_at, ends_at)
+       VALUES ($1, 'MASS', $2, $3, $4) RETURNING id`,
+      [centreId[g.centre], g.title, g.starts, g.ends]
     );
     for (const r of g.ranksTested) {
       await client.query(
