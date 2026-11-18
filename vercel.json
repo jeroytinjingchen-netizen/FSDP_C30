@@ -1,14 +1,13 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
-  "builds": [
-    { "src": "app.js", "use": "@vercel/node" },
-    { "src": "public/dist", "use": "@vercel/static" }
-  ],
+  "functions": {
+    "app.js": {
+      "includeFiles": "public/dist/**"
+    }
+  },
   "routes": [
     { "src": "/api/(.*)", "dest": "app.js" },
-    { "src": "/assets/(.*)", "dest": "public/dist/assets/$1" },
-    { "src": "/(.*)\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)", "dest": "public/dist/$1.$2" },
-    { "src": "/(.*)", "dest": "public/dist/index.html" }
+    { "src": "/(.*)", "dest": "app.js" }
   ]
 }
