@@ -49,7 +49,7 @@ async function list(filters) {
             s.first_name, s.last_name,
             c.id   AS centre_id,
             c.name AS centre_name,
-            pk.name AS package_name,
+            COALESCE(sp.name, pk.name) AS package_name,
             p.amount_cents,
             p.paid_at,
             p.channel AS payment_method,
@@ -59,7 +59,8 @@ async function list(filters) {
        FROM payments p
        JOIN students s ON s.id = p.student_id
        JOIN centres  c ON c.id = s.centre_id
-       LEFT JOIN packages pk ON pk.id = p.package_id
+       LEFT JOIN student_packages sp ON sp.payment_id = p.id
+       LEFT JOIN packages pk ON pk.id = sp.package_id
       WHERE ${whereSql}
       ORDER BY p.paid_at DESC, p.id`,
     values
