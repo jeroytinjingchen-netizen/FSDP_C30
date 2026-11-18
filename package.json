@@ -11,6 +11,7 @@
                     "client:dev":  "npm --prefix public run dev",
                     "client:build":  "npm --prefix public run build",
                     "dev":  "concurrently \"npm run appStart\" \"npm run client:dev\" \"stripe listen --forward-to localhost:3000/api/billing/webhook --all-snapshot\"",
+                    "build":  "npm --prefix public install && npm --prefix public run build",
                     "test":  "node --test tests/*.test.js"
                 },
     "repository":  {
