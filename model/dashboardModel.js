@@ -8,8 +8,8 @@ const pool = require('../dbConfig');
 // The four summary cards.
 //  - students: active students
 //  - active centres: centres not archived (when filtered to one centre, 1 or 0)
-//  - upcoming gradings: sessions that start from now on. Gradings are held at HQ, so they are
-//    counted when the centre filter is off, or when it is HQ.
+//  - upcoming gradings: sessions that start from now on. Gradings are held at HQ, so with a centre
+//    filter a session counts when it has a student from that centre (same rule as the Grading page).
 //  - collected this month: Successful (COMPLETED) payments paid in the current Singapore month.
 // count(*)::int casts the bigint result to a plain integer; COALESCE(SUM(..), 0) turns "no rows" into 0.
 async function summary(centreId) {
@@ -21,7 +21,9 @@ async function summary(centreId) {
          WHERE c.is_active AND ($1::uuid IS NULL OR c.id = $1)) AS active_centres,
        (SELECT count(*)::int FROM grading_sessions g
          WHERE g.starts_at >= now() AND g.status = 'SCHEDULED'
-           AND ($1::uuid IS NULL OR g.centre_id = $1)) AS upcoming_gradings,
+           AND ($1::uuid IS NULL OR EXISTS (
+                 SELECT 1 FROM grading_candidates gc JOIN students st ON st.id = gc.student_id
+                  WHERE gc.grading_session_id = g.id AND st.centre_id = $1))) AS upcoming_gradings,
        (SELECT COALESCE(SUM(p.amount_cents), 0)::int FROM payments p
           JOIN students s ON s.id = p.student_id
          WHERE p.status = 'COMPLETED'
@@ -41,7 +43,9 @@ async function upcomingGradings(centreId, limit) {
        FROM grading_sessions g
        JOIN centres c ON c.id = g.centre_id
       WHERE g.starts_at >= now() AND g.status = 'SCHEDULED'
-        AND ($1::uuid IS NULL OR g.centre_id = $1)
+        AND ($1::uuid IS NULL OR EXISTS (
+              SELECT 1 FROM grading_candidates gc JOIN students st ON st.id = gc.student_id
+               WHERE gc.grading_session_id = g.id AND st.centre_id = $1))
       ORDER BY g.starts_at ASC
       LIMIT $2`,
     [centreId, limit]
@@ -50,6 +54,7 @@ async function upcomingGradings(centreId, limit) {
 }
 
 // The latest payments, newest first. Failed ones are included so admins can see them.
+// A payment with no paid date (pending or failed) is placed by when it was created instead.
 async function recentPayments(centreId, limit) {
   const { rows } = await pool.query(
     `SELECT p.id, p.amount_cents, p.paid_at, p.status, p.reference,
@@ -58,7 +63,7 @@ async function recentPayments(centreId, limit) {
        JOIN students s ON s.id = p.student_id
        LEFT JOIN packages pk ON pk.id = p.package_id
       WHERE ($1::uuid IS NULL OR s.centre_id = $1)
-      ORDER BY p.paid_at DESC
+      ORDER BY COALESCE(p.paid_at, p.created_at) DESC
       LIMIT $2`,
     [centreId, limit]
   );
