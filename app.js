@@ -50,6 +50,12 @@ app.use((req, res, next) => {
   res.sendFile(path.join(clientDist, 'index.html'), (err) => err && next());
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+// Export for Vercel serverless
+module.exports = app;
+
+// Only start the server when running locally (not on Vercel)
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+  });
+}
