@@ -53,7 +53,7 @@ export default function StudentPortal() {
   }, []);
 
   // Only a verified student session may see this page. null means the check is still running.
-  if (verified === false) return <Navigate to="/" replace />;
+  if (verified === false || !user) return <Navigate to="/" replace />;
   if (verified === null) return null;
 
   // Creates a Stripe checkout for the package and sends the browser to Stripe's payment page.
