@@ -45,11 +45,15 @@ export default function StudentPortal() {
   }, [searchParams, load]);
 
   // Asks the server who holds the session cookie. The browser's stored user can be stale, for example
-  // after an admin login in another tab, so it is not trusted for this check.
+  // after an admin login in another tab, so it is not trusted for this check. When verification fails
+  // we also clear the stored user so the Login page does not redirect back here in a loop.
   useEffect(() => {
     api('/api/student/me')
       .then(() => setVerified(true))
-      .catch(() => setVerified(false));
+      .catch(() => {
+        setVerified(false);
+        logout();
+      });
   }, []);
 
   // Only a verified student session may see this page. null means the check is still running.
