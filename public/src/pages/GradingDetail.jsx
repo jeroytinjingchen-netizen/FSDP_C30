@@ -24,8 +24,15 @@ const outcomeLabel = (o) => (o === 'GRADED' ? 'Graded' : o === 'NOT_GRADED' ? 'N
 const toApi = (local) => new Date(`${local}:00+08:00`).toISOString();
 const toInput = (iso) => new Date(new Date(iso).getTime() + 8 * 3600 * 1000).toISOString().slice(0, 16);
 
-const SAMPLE_CSV =
-  'student_email,rank_graded_for,outcome,grading_instructor,remarks\nstudent@example.com,6th Kyu,Graded,Instructor Name,\n';
+const SAMPLE_CSV = [
+  'student_email,rank_graded_for,outcome,grading_instructor,remarks',
+  'alice.tan@example.com,4th Kyu,Graded,Tan Wei Ming,Strong fundamentals',
+  'ben.lim@example.com,3rd Kyu,Graded,Tan Wei Ming,',
+  'chloe.ng@example.com,5th Kyu,Not graded,Tan Wei Ming,Nervous — retry next session',
+  'daniel.ong@example.com,2nd Kyu,Graded,Rahim Abdullah,Excellent technique',
+  'eliza.koh@example.com,8th Kyu,Graded,Rahim Abdullah,',
+  'farid.ismail@example.com,1st Kyu,Graded,Rahim Abdullah,Ready for Dan',
+].join('\n') + '\n';
 
 export default function GradingDetail() {
   const { id } = useParams();
