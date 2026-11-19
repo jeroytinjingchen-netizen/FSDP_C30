@@ -157,7 +157,7 @@ export default function Dashboard() {
                       {p.first_name} {p.last_name}
                     </span>
                     <span className="block text-xs text-muted-foreground">
-                      {p.package_name || 'Package'} · {formatDateTime(p.paid_at)}
+                      {p.package_name} · {formatDateTime(p.paid_at)}
                     </span>
                   </span>
                   <span className="shrink-0 text-right">

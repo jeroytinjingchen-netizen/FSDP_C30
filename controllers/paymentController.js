@@ -93,7 +93,7 @@ async function exportPaymentsCsv(req, res) {
         [
           `${p.first_name} ${p.last_name}`,
           p.centre_name,
-          p.package_name || '',
+          p.package_name,
           (p.amount_cents / 100).toFixed(2),
           isoOrBlank(p.paid_at),
           p.payment_method,

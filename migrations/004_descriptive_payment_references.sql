@@ -1,17 +1,23 @@
 -- migrations/004_descriptive_payment_references.sql
 -- Changes payment references to METHOD-SESSIONS-YYYYMMDD-NNNNN, for example ST-5S-20261118-00001.
 --   METHOD    BT (bank transfer), C (cash), ST (Stripe), WA (WhatsApp), EM (email), OT (other)
---   SESSIONS  the package's session count with an S suffix (5S), or NP when no package is linked
+--   SESSIONS  the package's session count with an S suffix (5S)
 --   DATE      the payment date (paid_at) as YYYYMMDD
 --   NNNNN     one counter shared by all methods, so it keeps counting over all time
+-- A payment always belongs to a package, so a package-less payment cannot be recorded.
 -- Safe to rerun: the counter sequence is created only if missing, and the function is replaced.
 
 CREATE SEQUENCE IF NOT EXISTS payment_reference_counter_seq;
 
+-- Drop any leftover payment without a package, then make that requirement permanent.
+DELETE FROM payments WHERE package_id IS NULL;
+ALTER TABLE payments ALTER COLUMN package_id SET NOT NULL;
+
 -- Builds the reference for a new row. Runs before each insert, so the package and payment date are known.
 CREATE OR REPLACE FUNCTION assign_payment_reference() RETURNS trigger AS $$
 DECLARE
-  method_code text;
+  method_code  text;
+  sessions     integer;
   session_code text;
 BEGIN
   method_code := CASE NEW.channel::text
@@ -23,12 +29,12 @@ BEGIN
     ELSE                      'OT'
   END;
 
-  -- Look up the package's session count. NP means no package is linked to this payment.
-  SELECT CASE WHEN sessions_total IS NULL THEN 'NP' ELSE sessions_total::text || 'S' END
-    INTO session_code
-    FROM packages
-   WHERE id = NEW.package_id;
-  session_code := (session_code, 'NP');
+  -- Every payment is package-backed, so the session count always comes from its package.
+  SELECT sessions_total INTO sessions FROM packages WHERE id = NEW.package_id;
+  IF sessions IS NULL THEN
+    RAISE EXCEPTION 'A payment must reference an existing package (package_id %)', NEW.package_id;
+  END IF;
+  session_code := sessions::text || 'S';
 
   NEW.reference := method_code || '-' || session_code || '-'
     || to_char(NEW.paid_at AT TIME ZONE 'Asia/Singapore', 'YYYYMMDD') || '-'
@@ -52,13 +58,13 @@ WITH numbered AS (
            ELSE                      'OT'
          END
          || '-'
-         || COALESCE(CASE WHEN pk.sessions_total IS NULL THEN NULL ELSE pk.sessions_total::text || 'S' END, 'NP')
+         || pk.sessions_total::text || 'S'
          || '-'
          || to_char(p.paid_at AT TIME ZONE 'Asia/Singapore', 'YYYYMMDD')
          || '-'
          || lpad(row_number() OVER (ORDER BY p.paid_at, p.id)::text, 5, '0') AS new_reference
-    FROM payments pCOALESCE
-    LEFT JOIN packages pk ON pk.id = p.package_id
+    FROM payments p
+    JOIN packages pk ON pk.id = p.package_id
 )
 UPDATE payments p
    SET reference = n.new_reference

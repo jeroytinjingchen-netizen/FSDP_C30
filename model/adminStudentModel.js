@@ -148,14 +148,13 @@ async function rankHistory(studentId) {
   return rows;
 }
 
-// Payment history for the profile (AS-12). Read-only.
+// Payment history for the profile (AS-12). Read-only. Every payment has a package.
 async function paymentHistory(studentId) {
   const { rows } = await pool.query(
     `SELECT p.id, p.amount_cents, p.paid_at, p.channel, p.reference, p.status,
-            COALESCE(sp.name, pk.name) AS package_name
+            pk.name AS package_name
        FROM payments p
-       LEFT JOIN student_packages sp ON sp.payment_id = p.id
-       LEFT JOIN packages pk ON pk.id = sp.package_id
+       JOIN packages pk ON pk.id = p.package_id
       WHERE p.student_id = $1
       ORDER BY p.paid_at DESC`,
     [studentId]

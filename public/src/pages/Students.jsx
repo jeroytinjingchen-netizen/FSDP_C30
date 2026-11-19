@@ -469,7 +469,7 @@ export default function Students() {
                 empty="No payments."
                 columns={[
                   { label: 'Paid', render: (r) => formatDateTime(r.paid_at) },
-                  { label: 'Package', render: (r) => r.package_name || '-' },
+                  { label: 'Package', render: (r) => r.package_name },
                   { label: 'Amount', render: (r) => formatMoney(r.amount_cents) },
                   { label: 'Reference', render: (r) => r.reference },
                   { label: 'Status', render: (r) => paymentLabel(r.status) },

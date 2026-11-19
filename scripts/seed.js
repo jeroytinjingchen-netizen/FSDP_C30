@@ -175,7 +175,7 @@ const CLASSES = [
   { centre: 'Clementi Dojo',     name: 'Adult Aikido',        weekday: 5, start: 1140, end: 1200, instructor: 'Nurul Huda' },
 ];
 
-// Students are listed in seed order; the first 24 also get a paid package.
+// Students are listed in seed order; every student also gets a paid package.
 const STUDENTS = [
   { first: 'Demo',     last: 'Student',  email: DEMO_STUDENT.email,       centre: BISHAN, rank: '5th Kyu',   phone: '+65 9000 0000', dob: '1998-06-12', portal: true },
   { first: 'Alice',    last: 'Tan',      email: 'alice.tan@example.com',    centre: BISHAN, rank: '5th Kyu',   phone: '+65 9123 4001', dob: '2012-04-18', guardian: 'Tan Mei Ling',    guardianPhone: '+65 9123 4100', portal: true },
@@ -425,9 +425,10 @@ async function main() {
     }
 
     // ---------------------------------------------------------------- Payments + student packages
-    // The first 24 students each buy one package, then a few failed payments fill the Payments page.
+    // Every student buys one package. A separate failed payment on the first four students
+    // also fills the Payments page, and it is package-backed like every other payment.
     const packageNames = ['5-Session Pack', '10-Session Pack', '20-Session Pack', 'Junior 10-Session Pack', '10-Session Pack'];
-    const paidStudents = STUDENTS.slice(0, 24);
+    const paidStudents = STUDENTS;
     const purchasedAtByEmail = new Map();
     const packageIdByEmail = new Map();
 
@@ -435,8 +436,9 @@ async function main() {
       const s = paidStudents[i];
       const sid = studentId[s.email];
 
+      // Rerunning the seed must not duplicate a purchase, so skip a student who already has one.
       const { rows: existing } = await client.query(
-        'SELECT 1 FROM payments WHERE student_id = $1 LIMIT 1', [sid]
+        'SELECT 1 FROM student_packages WHERE student_id = $1 LIMIT 1', [sid]
       );
       const purchasedAt = new Date(Date.UTC(2026, 8, 1 + i * 3, 2, 0, 0));
       purchasedAtByEmail.set(s.email, purchasedAt);
@@ -455,6 +457,13 @@ async function main() {
       const amount = pkg.price;
       const paidAt = purchasedAt.toISOString();
       const recordedBy = i % 3 === 0 ? secondAdminId : adminId;
+      const expiresAt = addDays(purchasedAt, pkg.weeks * 7).toISOString();
+
+      // A student who is only known from a failed payment already has a payment row. Replace it so the
+      // reference is generated for the package actually bought; a failed row never owns a package.
+      await client.query(
+        `DELETE FROM payments WHERE student_id = $1 AND status = 'FAILED'`, [sid]
+      );
 
       const { rows: payment } = await client.query(
         `INSERT INTO payments (amount_cents, channel, status, paid_at, notes, recorded_by_id, student_id, package_id, created_at)
@@ -463,7 +472,6 @@ async function main() {
         [amount, channel, paidAt, `Seeded ${pkg.name} payment`, recordedBy, sid, packageId[packageName]]
       );
 
-      const expiresAt = addDays(purchasedAt, pkg.weeks * 7).toISOString();
       await client.query(
         `INSERT INTO student_packages (student_id, package_id, payment_id, name, sessions_total, purchased_at, expires_at, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $6)
@@ -473,13 +481,14 @@ async function main() {
       packageIdByEmail.set(s.email, packageId[packageName]);
     }
 
-    // A few failed payments (no package is created for a failed payment).
-    const failedStudents = STUDENTS.slice(24, 28);
+    // A few failed payments on students who already bought a package. A failed payment never
+    // activates a package, but it still names the package the student tried to buy.
+    const failedStudents = STUDENTS.slice(0, 4);
     for (let i = 0; i < failedStudents.length; i++) {
       const s = failedStudents[i];
       const sid = studentId[s.email];
       const { rows: existing } = await client.query(
-        'SELECT 1 FROM payments WHERE student_id = $1 LIMIT 1', [sid]
+        `SELECT 1 FROM payments WHERE student_id = $1 AND status = 'FAILED' LIMIT 1`, [sid]
       );
       if (existing.length) continue;
       await client.query(

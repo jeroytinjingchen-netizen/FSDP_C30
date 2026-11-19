@@ -44,7 +44,8 @@ function buildFilter(filters) {
 }
 
 // Lists payments for the admin, newest first. Read-only: there is no create, update or delete.
-// LEFT JOIN keeps old payments that have no package. Every payment has a student.
+// Every payment belongs to a package, so the package name is always shown, even for a failed
+// payment that never produced a student package.
 async function list(filters) {
   const { whereSql, values } = buildFilter(filters);
   const { rows } = await pool.query(
@@ -53,7 +54,7 @@ async function list(filters) {
             s.first_name, s.last_name,
             c.id   AS centre_id,
             c.name AS centre_name,
-            COALESCE(sp.name, pk.name) AS package_name,
+            pk.name AS package_name,
             p.amount_cents,
             p.paid_at,
             p.channel AS payment_method,
@@ -63,8 +64,7 @@ async function list(filters) {
        FROM payments p
        JOIN students s ON s.id = p.student_id
        JOIN centres  c ON c.id = s.centre_id
-       LEFT JOIN student_packages sp ON sp.payment_id = p.id
-       LEFT JOIN packages pk ON pk.id = sp.package_id
+       JOIN packages pk ON pk.id = p.package_id
       WHERE ${whereSql}
       ORDER BY p.paid_at DESC, p.id`,
     values

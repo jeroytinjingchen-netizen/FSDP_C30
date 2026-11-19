@@ -162,7 +162,7 @@ export default function Payments() {
           </div>
           <div>
             <dt className="font-medium">SESSIONS</dt>
-            <dd className="text-muted-foreground">Sessions in the linked package, for example 5S = 5 sessions. NP = no package linked.</dd>
+            <dd className="text-muted-foreground">Sessions in the package, for example 5S = 5 sessions.</dd>
           </div>
           <div>
             <dt className="font-medium">DATE</dt>
@@ -209,7 +209,7 @@ export default function Payments() {
                   <tr key={p.id} className="border-t transition-colors duration-200 hover:bg-muted/60">
                     <td className="px-4 py-3 font-medium">{`${p.first_name} ${p.last_name}`}</td>
                     <td className="px-4 py-3 text-muted-foreground">{p.centre_name}</td>
-                    <td className="px-4 py-3">{p.package_name || '-'}</td>
+                    <td className="px-4 py-3">{p.package_name}</td>
                     <td className="px-4 py-3 tabular-nums">{money(p.amount_cents)}</td>
                     <td className="px-4 py-3 tabular-nums">{displayDateTime(p.paid_at)}</td>
                     <td className="px-4 py-3">{methodLabel(p.payment_method)}</td>

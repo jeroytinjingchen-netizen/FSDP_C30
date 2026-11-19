@@ -43,7 +43,8 @@ CREATE OR REPLACE FUNCTION public.assign_payment_reference()
  LANGUAGE plpgsql
 AS $function$
 DECLARE
-  method_code text;
+  method_code  text;
+  sessions     integer;
   session_code text;
 BEGIN
   method_code := CASE NEW.channel::text
@@ -55,12 +56,12 @@ BEGIN
     ELSE                      'OT'
   END;
 
-  -- Look up the package's session count. NP means no package is linked to this payment.
-  SELECT CASE WHEN sessions_total IS NULL THEN 'NP' ELSE sessions_total::text || 'S' END
-    INTO session_code
-    FROM packages
-   WHERE id = NEW.package_id;
-  session_code := COALESCE(session_code, 'NP');
+  -- Every payment is package-backed, so the session count always comes from its package.
+  SELECT sessions_total INTO sessions FROM packages WHERE id = NEW.package_id;
+  IF sessions IS NULL THEN
+    RAISE EXCEPTION 'A payment must reference an existing package (package_id %)', NEW.package_id;
+  END IF;
+  session_code := sessions::text || 'S';
 
   NEW.reference := method_code || '-' || session_code || '-'
     || to_char(NEW.paid_at AT TIME ZONE 'Asia/Singapore', 'YYYYMMDD') || '-'
@@ -274,7 +275,7 @@ CREATE TABLE "payments" (
   "stripe_payment_intent" text,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "student_id" uuid,
-  "package_id" uuid,
+  "package_id" uuid NOT NULL,
   CONSTRAINT "chk_payments_owner" CHECK (((invoice_id IS NOT NULL) OR (student_id IS NOT NULL))) NOT VALID,
   CONSTRAINT "chk_payments_status" CHECK (((status)::text = ANY (ARRAY['COMPLETED'::text, 'FAILED'::text]))) NOT VALID,
   CONSTRAINT "payments_amount_cents_check" CHECK ((amount_cents > 0)),
@@ -627,16 +628,13 @@ INSERT INTO "packages" ("id", "name", "sessions_total", "validity_weeks", "price
 INSERT INTO "packages" ("id", "name", "sessions_total", "validity_weeks", "price_cents", "currency", "is_active", "created_at") VALUES ('e39c4d36-063b-41c4-88bb-61d4372cf0ca', 'Trial Class', '1', '2', '2500', 'SGD', 'true', '2026-11-18 09:33:02.324495+00');
 
 -- payments
-INSERT INTO "payments" ("id", "invoice_id", "amount_cents", "channel", "status", "paid_at", "reference", "notes", "recorded_by_id", "stripe_checkout_session", "stripe_payment_intent", "created_at", "student_id", "package_id") VALUES ('10f26a86-e248-4cb6-8ce5-25cbef5b8436', 'de0acf19-2f97-4608-b3ae-85b87493b299', '10000', 'CASH', 'COMPLETED', '2026-10-10 11:30:00+00', 'C-NP-20261010-00002', NULL, NULL, NULL, NULL, '2026-11-13 04:42:30.269801+00', '6f2f0e05-3e63-426a-8f70-3e52bf4e8ede', NULL);
 INSERT INTO "payments" ("id", "invoice_id", "amount_cents", "channel", "status", "paid_at", "reference", "notes", "recorded_by_id", "stripe_checkout_session", "stripe_payment_intent", "created_at", "student_id", "package_id") VALUES ('26e31bc4-bb67-4dd1-beda-a7adfad93b4a', NULL, '16000', 'CASH', 'COMPLETED', '2026-11-05 03:00:00+00', 'C-10S-20261105-00007', 'Seeded demo payment', NULL, NULL, NULL, '2026-11-18 12:28:20.373831+00', 'd8dbd664-f061-4684-a7db-72a043313681', 'a991d0e6-694c-42dc-95ac-39b3d2b8713b');
 INSERT INTO "payments" ("id", "invoice_id", "amount_cents", "channel", "status", "paid_at", "reference", "notes", "recorded_by_id", "stripe_checkout_session", "stripe_payment_intent", "created_at", "student_id", "package_id") VALUES ('58da3ae6-5dea-4ff3-b675-eb683323563d', NULL, '16000', 'CASH', 'COMPLETED', '2026-11-10 03:00:00+00', 'C-10S-20261110-00011', 'Seeded demo payment', NULL, NULL, NULL, '2026-11-18 12:28:49.637769+00', 'e76659af-8f6d-4fa6-93d4-1da957828a31', 'a991d0e6-694c-42dc-95ac-39b3d2b8713b');
 INSERT INTO "payments" ("id", "invoice_id", "amount_cents", "channel", "status", "paid_at", "reference", "notes", "recorded_by_id", "stripe_checkout_session", "stripe_payment_intent", "created_at", "student_id", "package_id") VALUES ('590196e0-db14-4b77-b23f-65ca2e756b06', NULL, '16000', 'CASH', 'COMPLETED', '2026-11-06 03:00:00+00', 'C-10S-20261106-00010', 'Seeded demo payment', NULL, NULL, NULL, '2026-11-18 12:28:49.637769+00', '6f2f0e05-3e63-426a-8f70-3e52bf4e8ede', 'a991d0e6-694c-42dc-95ac-39b3d2b8713b');
-INSERT INTO "payments" ("id", "invoice_id", "amount_cents", "channel", "status", "paid_at", "reference", "notes", "recorded_by_id", "stripe_checkout_session", "stripe_payment_intent", "created_at", "student_id", "package_id") VALUES ('7dbed6d6-b9ed-4cd9-90c0-c3dc12ffc5c3', '9e9e03d3-5e01-4de0-83c8-18a234e91ac1', '18000', 'BANK_TRANSFER', 'COMPLETED', '2026-10-03 01:15:00+00', 'BT-NP-20261003-00001', NULL, NULL, NULL, NULL, '2026-11-13 04:42:30.269801+00', '4b21a173-c83d-4573-b487-ea22ef46a86b', NULL);
 INSERT INTO "payments" ("id", "invoice_id", "amount_cents", "channel", "status", "paid_at", "reference", "notes", "recorded_by_id", "stripe_checkout_session", "stripe_payment_intent", "created_at", "student_id", "package_id") VALUES ('af10c055-24d7-435c-8b7f-c5e5a51f1966', NULL, '9000', 'STRIPE', 'COMPLETED', '2026-11-18 11:23:40.916948+00', 'ST-5S-20261118-00004', NULL, NULL, 'cs_test_a0FI8OkU8SBAQFnekRXcPmzTdcr4v1fUBPu6CskUmONc80bobb0SV72OCd', 'pi_3Ud6xXKAstsxIEvV0mXJYpN1', '2026-11-18 11:23:40.916948+00', 'da137fa3-5c7c-43f1-b8dc-12bdc5ffc208', '3e0ca186-1a46-4d01-b2f5-5887375d658c');
 INSERT INTO "payments" ("id", "invoice_id", "amount_cents", "channel", "status", "paid_at", "reference", "notes", "recorded_by_id", "stripe_checkout_session", "stripe_payment_intent", "created_at", "student_id", "package_id") VALUES ('b90e5392-6a5c-4a74-8af6-6dd5b8a4d058', NULL, '16000', 'CASH', 'COMPLETED', '2026-11-03 03:00:00+00', 'C-10S-20261103-00009', 'Seeded demo payment', NULL, NULL, NULL, '2026-11-18 12:28:49.637769+00', '4b21a173-c83d-4573-b487-ea22ef46a86b', 'a991d0e6-694c-42dc-95ac-39b3d2b8713b');
 INSERT INTO "payments" ("id", "invoice_id", "amount_cents", "channel", "status", "paid_at", "reference", "notes", "recorded_by_id", "stripe_checkout_session", "stripe_payment_intent", "created_at", "student_id", "package_id") VALUES ('caf139b9-58f5-4234-b968-ab4cf153b87e', NULL, '16000', 'CASH', 'COMPLETED', '2026-11-09 03:00:00+00', 'C-10S-20261109-00008', 'Seeded demo payment', NULL, NULL, NULL, '2026-11-18 12:28:20.373831+00', '3bc3626f-5e46-481d-954c-1bf4fa884a59', 'a991d0e6-694c-42dc-95ac-39b3d2b8713b');
 INSERT INTO "payments" ("id", "invoice_id", "amount_cents", "channel", "status", "paid_at", "reference", "notes", "recorded_by_id", "stripe_checkout_session", "stripe_payment_intent", "created_at", "student_id", "package_id") VALUES ('f4ae11f1-a8c9-4567-9a64-073bf8b5b29a', NULL, '16000', 'CASH', 'COMPLETED', '2026-11-02 03:00:00+00', 'C-10S-20261102-00006', 'Seeded demo payment', NULL, NULL, NULL, '2026-11-18 12:28:20.373831+00', 'a4ac10ed-bcff-4d62-94ef-2ec4756f0e29', 'a991d0e6-694c-42dc-95ac-39b3d2b8713b');
-INSERT INTO "payments" ("id", "invoice_id", "amount_cents", "channel", "status", "paid_at", "reference", "notes", "recorded_by_id", "stripe_checkout_session", "stripe_payment_intent", "created_at", "student_id", "package_id") VALUES ('f87b12fb-fb6f-4680-9bd8-1b5b447527d4', '18367960-3af1-4a7e-9a04-9a9acc1b0560', '18000', 'BANK_TRANSFER', 'COMPLETED', '2026-11-13 07:46:13.704018+00', 'BT-NP-20261113-00003', NULL, '4dd2a154-1aa8-42d5-92e0-399d5447211b', NULL, NULL, '2026-11-13 07:46:13.704018+00', 'e76659af-8f6d-4fa6-93d4-1da957828a31', NULL);
 
 -- student_packages
 INSERT INTO "student_packages" ("id", "student_id", "package_id", "payment_id", "name", "sessions_total", "purchased_at", "expires_at", "created_at") VALUES ('14b64cb0-5da6-4c0a-97ba-a01148645dea', '3bc3626f-5e46-481d-954c-1bf4fa884a59', 'a991d0e6-694c-42dc-95ac-39b3d2b8713b', 'caf139b9-58f5-4234-b968-ab4cf153b87e', '10-Session Pack', '10', '2026-11-09 03:00:00+00', '2027-01-25 03:00:00+00', '2026-11-18 12:28:20.373831+00');
