@@ -58,7 +58,7 @@ async function main() {
 
     await client.query('COMMIT');
     console.log('Seed complete.');
-    console.log('Sample data: 10 centres, 9 instructors, 6 students, 5 class templates, 2 grading sessions, invoices and payments.');
+    console.log('Sample data: 10 centres, 9 instructors, 26 students, 5 class templates, 9 grading sessions, invoices and payments.');
     console.log(`Admin:   ${ADMIN.email} / ${ADMIN.password}`);
     console.log(`Student: ${STUDENT.email} / ${STUDENT.password}`);
   } catch (err) {
