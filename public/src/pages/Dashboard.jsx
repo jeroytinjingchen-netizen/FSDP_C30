@@ -37,6 +37,7 @@ function ListBox({ title, to, children }) {
 export default function Dashboard() {
   const { centreId, centreQuery } = useCentre();
   const [data, setData] = useState(null); // null until loaded
+  const [error, setError] = useState(null);
   const [alert, setAlert] = useState(null);
 
   // Fetch again whenever the selected centre changes. "cancelled" stops an old response from
@@ -44,14 +45,21 @@ export default function Dashboard() {
   useEffect(() => {
     let cancelled = false;
     setData(null);
+    setError(null);
     api(`/api/dashboard${centreQuery()}`)
       .then((d) => !cancelled && setData(d))
-      .catch((err) => !cancelled && setAlert({ error: true, text: err.message }));
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err.message);
+          setAlert({ error: true, text: err.message });
+        }
+      });
     return () => {
       cancelled = true;
     };
   }, [centreId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const loading = !data && !error;
   const t = data && data.totals;
 
   return (
@@ -63,14 +71,25 @@ export default function Dashboard() {
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card label="Total students" value={t ? t.total_students : '...'} />
-        <Card label="Active centres" value={t ? t.active_centres : '...'} />
-        <Card label="Upcoming gradings" value={t ? t.upcoming_gradings : '...'} />
-        <Card label="Collected this month" value={t ? formatMoney(t.collected_this_month_cents) : '...'} />
+        <Card label="Total students" value={loading ? <span className="inline-block h-7 w-12 animate-pulse rounded bg-muted" /> : error ? '—' : t.total_students} />
+        <Card label="Active centres" value={loading ? <span className="inline-block h-7 w-12 animate-pulse rounded bg-muted" /> : error ? '—' : t.active_centres} />
+        <Card label="Upcoming gradings" value={loading ? <span className="inline-block h-7 w-12 animate-pulse rounded bg-muted" /> : error ? '—' : t.upcoming_gradings} />
+        <Card label="Collected this month" value={loading ? <span className="inline-block h-7 w-20 animate-pulse rounded bg-muted" /> : error ? '—' : formatMoney(t.collected_this_month_cents)} />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <ListBox title="Upcoming gradings" to="/admin/grading">
+          {loading && (
+            <ul className="divide-y text-sm">
+              {[0, 1, 2].map((i) => (
+                <li key={i} className="flex items-center justify-between py-2">
+                  <span className="inline-block h-4 w-32 animate-pulse rounded bg-muted" />
+                  <span className="inline-block h-4 w-20 animate-pulse rounded bg-muted" />
+                </li>
+              ))}
+            </ul>
+          )}
+          {error && <p className="text-sm text-destructive">Failed to load. {error}</p>}
           {data && data.upcomingGradings.length === 0 && <p className="text-sm text-muted-foreground">No upcoming gradings.</p>}
           <ul className="divide-y text-sm">
             {data &&
@@ -86,6 +105,17 @@ export default function Dashboard() {
         </ListBox>
 
         <ListBox title="Recent payments" to="/admin/payments">
+          {loading && (
+            <ul className="divide-y text-sm">
+              {[0, 1, 2].map((i) => (
+                <li key={i} className="flex items-center justify-between gap-3 py-2">
+                  <span className="inline-block h-4 w-28 animate-pulse rounded bg-muted" />
+                  <span className="inline-block h-4 w-16 animate-pulse rounded bg-muted" />
+                </li>
+              ))}
+            </ul>
+          )}
+          {error && <p className="text-sm text-destructive">Failed to load. {error}</p>}
           {data && data.recentPayments.length === 0 && <p className="text-sm text-muted-foreground">No payments yet.</p>}
           <ul className="divide-y text-sm">
             {data &&

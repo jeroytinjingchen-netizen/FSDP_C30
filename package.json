@@ -1,42 +1,43 @@
 {
-    "name":  "fsdp_c30",
-    "version":  "1.0.0",
-    "description":  "",
-    "main":  "app.js",
-    "scripts":  {
-                    "appStart":  "nodemon app.js",
-                    "seed":  "node scripts/seed.js",
-                    "migrate":  "node scripts/migrate.js",
-                    "client:install":  "npm --prefix public install",
-                    "client:dev":  "npm --prefix public run dev",
-                    "client:build":  "npm --prefix public run build",
-                    "dev":  "concurrently \"npm run appStart\" \"npm run client:dev\" \"stripe listen --forward-to localhost:3000/api/billing/webhook --all-snapshot\"",
-                    "build":  "npm --prefix public install && npm --prefix public run build",
-                    "test":  "node --test tests/*.test.js"
-                },
-    "repository":  {
-                       "type":  "git",
-                       "url":  "git+https://github.com/jeroytinjingchen-netizen/FSDP_C30.git"
-                   },
-    "keywords":  [
-
-                 ],
-    "author":  "",
-    "license":  "ISC",
-    "type":  "commonjs",
-    "bugs":  {
-                 "url":  "https://github.com/jeroytinjingchen-netizen/FSDP_C30/issues"
-             },
-    "homepage":  "https://github.com/jeroytinjingchen-netizen/FSDP_C30#readme",
-    "dependencies":  {
-                         "bcrypt":  "^6.0.0",
-                         "dotenv":  "^18.0.9",
-                         "express":  "^5.3.0",
-                         "joi":  "^18.3.1",
-                         "nodemon":  "^3.1.14",
-                         "pdfkit":  "^0.20.2",
-                         "pg":  "^8.23.1",
-                         "resend":  "6.37.0",
-                         "stripe":  "23.1.0"
-                     }
+    "name": "fsdp_c30",
+    "version": "1.0.0",
+    "description": "",
+    "main": "app.js",
+    "scripts": {
+        "appStart": "nodemon app.js",
+        "seed": "node scripts/seed.js",
+        "migrate": "node scripts/migrate.js",
+        "client:install": "npm --prefix public install",
+        "client:dev": "npm --prefix public run dev",
+        "client:build": "npm --prefix public run build",
+        "dev": "concurrently \"npm run appStart\" \"npm run client:dev\" \"stripe listen --forward-to localhost:3000/api/billing/webhook --all-snapshot\"",
+        "build": "npm --prefix public install && npm --prefix public run build",
+        "test": "node --test tests/*.test.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/jeroytinjingchen-netizen/FSDP_C30.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "commonjs",
+    "bugs": {
+        "url": "https://github.com/jeroytinjingchen-netizen/FSDP_C30/issues"
+    },
+    "homepage": "https://github.com/jeroytinjingchen-netizen/FSDP_C30#readme",
+    "dependencies": {
+        "bcrypt": "^6.0.0",
+        "dotenv": "^18.0.9",
+        "express": "^5.3.0",
+        "joi": "^18.3.1",
+        "nodemon": "^3.1.11",
+        "pdfkit": "^0.20.2",
+        "pg": "^8.23.1",
+        "resend": "6.37.0",
+        "stripe": "23.1.0"
+    },
+    "devDependencies": {
+        "concurrently": "^10.0.7"
+    }
 }

@@ -33,8 +33,12 @@ function buildFilter(filters) {
   if (filters.status === 'SUCCESSFUL') where.push(`p.status = 'COMPLETED'`);
   if (filters.status === 'FAILED') where.push(`p.status = 'FAILED'`);
 
-  // Reference number search (partial, case-insensitive).
-  if (filters.search) where.push(`p.reference ILIKE ${add(`%${escapeLike(filters.search)}%`)}`);
+  // Reference number or student name search (partial, case-insensitive).
+  // The same placeholder is reused so the term is only added once.
+  if (filters.search) {
+    const term = add(`%${escapeLike(filters.search)}%`);
+    where.push(`(p.reference ILIKE ${term} OR (s.first_name || ' ' || s.last_name) ILIKE ${term})`);
+  }
 
   return { whereSql: where.join(' AND '), values };
 }

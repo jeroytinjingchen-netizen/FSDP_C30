@@ -3,18 +3,18 @@ import { useEffect, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
 import { CentreProvider } from '../CentreContext.jsx';
-import { BuildingIcon, CalendarIcon, CheckCircleIcon, LogOutIcon, MapPinIcon, MenuIcon, XIcon } from './Icons.jsx';
+import { BuildingIcon, CalendarIcon, GraduationCapIcon, LayoutDashboardIcon, LogOutIcon, MapPinIcon, MenuIcon, MoonIcon, SunIcon, UsersIcon, WalletIcon, XIcon } from './Icons.jsx';
 import { cn } from './ui.jsx';
 
 // Sidebar links. 'icon' is a component from Icons.jsx drawn next to the label.
 const NAV = [
-  { to: '/admin/dashboard', label: 'Dashboard', icon: CheckCircleIcon },
+  { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboardIcon },
   { to: '/admin/centres', label: 'Centres', icon: BuildingIcon },
   { to: '/admin/classes', label: 'Classes', icon: CalendarIcon },
   { to: '/admin/instructors', label: 'Instructors', icon: MapPinIcon },
-  { to: '/admin/students', label: 'Students', icon: CheckCircleIcon },
-  { to: '/admin/grading', label: 'Grading', icon: CheckCircleIcon },
-  { to: '/admin/payments', label: 'Payments', icon: CheckCircleIcon },
+  { to: '/admin/students', label: 'Students', icon: UsersIcon },
+  { to: '/admin/grading', label: 'Grading', icon: GraduationCapIcon },
+  { to: '/admin/payments', label: 'Payments', icon: WalletIcon },
 ];
 
 // Brand: the logo and name at the top of the sidebar.
@@ -31,7 +31,7 @@ function Brand() {
 }
 
 // SidebarContent: the menu (NavLink highlights the current page) and the Log out button.
-function SidebarContent({ onLogout, onNavigate }) {
+function SidebarContent({ onLogout, onNavigate, theme, toggle }) {
   return (
     <div className="flex h-full flex-col gap-6 p-4">
       <Brand />
@@ -58,6 +58,14 @@ function SidebarContent({ onLogout, onNavigate }) {
       </nav>
 
       <div className="mt-auto flex flex-col gap-4">
+        <button
+          type="button"
+          onClick={toggle}
+          className="inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium text-sidebar-foreground transition-colors duration-200 hover:bg-sidebar-active hover:text-white"
+        >
+          {theme === 'dark' ? <SunIcon size={18} /> : <MoonIcon size={18} />}
+          {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+        </button>
         <div className="flex items-center gap-2 border-t border-white/10 pt-4">
           <button
             type="button"
@@ -73,12 +81,26 @@ function SidebarContent({ onLogout, onNavigate }) {
   );
 }
 
+// useTheme: a small hook that reads, sets, and persists the colour theme on <html data-theme>.
+function useTheme() {
+  const [theme, setTheme] = useState(() => {
+    if (typeof window === 'undefined') return 'light';
+    return localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  });
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+  return { theme, toggle: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')) };
+}
+
 // AdminLayout: the frame around every admin page. Logged-out users and students are sent to the login page.
 // <Outlet /> is where the current page (Dashboard, Centres, ...) is drawn.
 export default function AdminLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const { theme, toggle } = useTheme();
 
   useEffect(() => {
     if (!open) return;
@@ -99,7 +121,7 @@ export default function AdminLayout() {
     <CentreProvider>
       <div className="min-h-screen bg-background lg:pl-64">
         <aside className="fixed inset-y-0 left-0 hidden w-64 bg-sidebar lg:block">
-          <SidebarContent onLogout={logout} />
+          <SidebarContent onLogout={logout} theme={theme} toggle={toggle} />
         </aside>
 
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-sidebar px-4 lg:hidden">
@@ -128,7 +150,7 @@ export default function AdminLayout() {
               >
                 <XIcon size={18} />
               </button>
-              <SidebarContent onLogout={logout} onNavigate={() => setOpen(false)} />
+              <SidebarContent onLogout={logout} onNavigate={() => setOpen(false)} theme={theme} toggle={toggle} />
             </aside>
           </div>
         )}

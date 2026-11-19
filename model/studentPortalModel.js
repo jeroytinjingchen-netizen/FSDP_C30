@@ -121,4 +121,50 @@ async function recordAttendance(studentId) {
   }
 }
 
-module.exports = { getRank, listPackages, findPackage, getCurrentPackage, recordAttendance };
+// Returns the student's grading history (most recent first).
+async function getGradingHistory(studentId) {
+  const { rows } = await pool.query(
+    `SELECT gs.title, gs.starts_at, r.name AS rank_name, r.colour AS rank_colour,
+            CASE gc.outcome::text WHEN 'GRADED' THEN 'PASS' WHEN 'NOT_GRADED' THEN 'NOT PASSED' ELSE gc.outcome::text END AS result,
+            gc.result_recorded_at AS awarded_at
+       FROM grading_candidates gc
+       JOIN grading_sessions gs ON gs.id = gc.grading_session_id
+       LEFT JOIN ranks r ON r.id = gc.graded_for_rank_id
+      WHERE gc.student_id = $1
+      ORDER BY gs.starts_at DESC`,
+    [studentId]
+  );
+  return rows;
+}
+
+// Returns the student's attendance history (most recent first).
+async function getAttendanceHistory(studentId) {
+  const { rows } = await pool.query(
+    `SELECT a.attended_on, a.attended_at, sp.name AS package_name
+       FROM attendance a
+       LEFT JOIN student_packages sp ON sp.id = a.student_package_id
+      WHERE a.student_id = $1
+      ORDER BY a.attended_on DESC
+      LIMIT 50`,
+    [studentId]
+  );
+  return rows;
+}
+
+// Returns the student's class schedule (classes at their centre).
+async function getClassSchedule(studentId) {
+  const { rows } = await pool.query(
+    `SELECT cl.name, cl.weekday, cl.start_minute, cl.end_minute,
+            i.name AS instructor_name, c.name AS centre_name
+       FROM class_templates cl
+       JOIN students s ON s.centre_id = cl.centre_id
+       LEFT JOIN instructors i ON i.id = cl.instructor_id
+       JOIN centres c ON c.id = cl.centre_id
+      WHERE s.id = $1
+      ORDER BY cl.weekday, cl.start_minute`,
+    [studentId]
+  );
+  return rows;
+}
+
+module.exports = { getRank, listPackages, findPackage, getCurrentPackage, recordAttendance, getGradingHistory, getAttendanceHistory, getClassSchedule };
