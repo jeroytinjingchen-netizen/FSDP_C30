@@ -110,37 +110,37 @@ export default function Payments() {
       </PageHeader>
 
       <section aria-label="Payment summary" className="mb-6 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border bg-card p-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Total collected (shown)</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums">{money(totalCents)}</p>
+        <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total collected (shown)</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{money(totalCents)}</p>
           <p className="mt-1 text-xs text-muted-foreground">Successful payments only.</p>
         </div>
-        <div className="rounded-xl border bg-card p-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Payments shown</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums">{payments.length}</p>
+        <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Payments shown</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{payments.length}</p>
         </div>
       </section>
 
-      <section aria-label="Filters" className="mb-4 rounded-xl border bg-card p-4">
+      <section aria-label="Filters" className="mb-4 rounded-xl border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-muted-foreground">Reference / student</span>
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-medium text-foreground">Reference / student</span>
             <input type="search" value={filters.search} onChange={setField('search')} placeholder="Search reference" className={inputClass} style={{ width: '180px' }} />
           </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-muted-foreground">Status</span>
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-medium text-foreground">Status</span>
             <select value={filters.status} onChange={setField('status')} className={inputClass} style={{ width: '140px' }}>
               <option value="">All statuses</option>
               <option value="SUCCESSFUL">Successful</option>
               <option value="FAILED">Failed</option>
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-muted-foreground">Date from</span>
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-medium text-foreground">Date from</span>
             <input type="date" value={filters.paymentFrom} onChange={setField('paymentFrom')} className={inputClass} style={{ width: '150px' }} />
           </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-muted-foreground">Date to</span>
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-medium text-foreground">Date to</span>
             <input type="date" value={filters.paymentTo} onChange={setField('paymentTo')} className={inputClass} style={{ width: '150px' }} />
           </label>
           <Button variant="secondary" onClick={() => setFilters(EMPTY_FILTERS)} disabled={!hasFilters}>
@@ -150,7 +150,7 @@ export default function Payments() {
       </section>
 
       {/* Explains the reference format, for example ST-5S-20261118-00004. Codes match migration 004. */}
-      <section aria-label="Reference number legend" className="mb-4 rounded-xl border bg-card p-4 text-sm">
+      <section aria-label="Reference number legend" className="mb-4 rounded-xl border bg-card p-4 shadow-sm text-sm">
         <h2 className="mb-2 font-medium">Reference number format</h2>
         <p className="mb-3 font-mono text-xs text-muted-foreground">METHOD-SESSIONS-DATE-NUMBER, for example ST-5S-20261118-00004</p>
         <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">

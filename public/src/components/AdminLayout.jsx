@@ -3,28 +3,28 @@ import { useEffect, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
 import { CentreProvider } from '../CentreContext.jsx';
-import { BuildingIcon, CalendarIcon, CheckCircleIcon, LogOutIcon, MapPinIcon, MenuIcon, XIcon } from './Icons.jsx';
+import { AwardIcon, BuildingIcon, CalendarIcon, CreditCardIcon, LayoutDashboardIcon, LogOutIcon, MenuIcon, UsersIcon, UserIcon, XIcon } from './Icons.jsx';
 import { cn } from './ui.jsx';
 
 // Sidebar links. 'icon' is a component from Icons.jsx drawn next to the label.
 const NAV = [
-  { to: '/admin/dashboard', label: 'Dashboard', icon: CheckCircleIcon },
+  { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboardIcon },
   { to: '/admin/centres', label: 'Centres', icon: BuildingIcon },
   { to: '/admin/classes', label: 'Classes', icon: CalendarIcon },
-  { to: '/admin/instructors', label: 'Instructors', icon: MapPinIcon },
-  { to: '/admin/students', label: 'Students', icon: CheckCircleIcon },
-  { to: '/admin/grading', label: 'Grading', icon: CheckCircleIcon },
-  { to: '/admin/payments', label: 'Payments', icon: CheckCircleIcon },
+  { to: '/admin/instructors', label: 'Instructors', icon: UserIcon },
+  { to: '/admin/students', label: 'Students', icon: UsersIcon },
+  { to: '/admin/grading', label: 'Grading', icon: AwardIcon },
+  { to: '/admin/payments', label: 'Payments', icon: CreditCardIcon },
 ];
 
 // Brand: the logo and name at the top of the sidebar.
 function Brand() {
   return (
     <div className="flex items-center gap-3">
-      <img src="/aikido-shinjukai-logo.png" alt="Aikido Shinjukai logo" className="size-9 rounded-lg object-cover" />
+      <img src="/aikido-shinjukai-logo.png" alt="Aikido Shinjukai logo" className="size-9 rounded-lg object-cover ring-2 ring-white/20" />
       <div className="leading-tight">
         <p className="font-semibold text-white">Aikido Shinjukai</p>
-        <p className="text-xs text-sidebar-foreground">Admin console</p>
+        <p className="text-xs text-sidebar-foreground/80 tracking-wide uppercase">Admin console</p>
       </div>
     </div>
   );
@@ -36,7 +36,7 @@ function SidebarContent({ onLogout, onNavigate }) {
     <div className="flex h-full flex-col gap-6 p-4">
       <Brand />
 
-      <nav aria-label="Main" className="flex flex-col gap-1">
+      <nav aria-label="Main" className="flex flex-col gap-0.5">
         {NAV.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -44,14 +44,14 @@ function SidebarContent({ onLogout, onNavigate }) {
             onClick={onNavigate}
             className={({ isActive }) =>
               cn(
-                'flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-200',
+                'flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150',
                 isActive
                   ? 'bg-sidebar-active text-white'
-                  : 'text-sidebar-foreground hover:bg-sidebar-active hover:text-white'
+                  : 'text-sidebar-foreground hover:bg-sidebar-hover hover:text-white'
               )
             }
           >
-            <Icon size={18} />
+            <Icon size={17} />
             {label}
           </NavLink>
         ))}
@@ -62,9 +62,9 @@ function SidebarContent({ onLogout, onNavigate }) {
           <button
             type="button"
             onClick={onLogout}
-            className="inline-flex h-10 flex-1 items-center gap-2 rounded-lg px-3 text-sm font-medium text-sidebar-foreground transition-colors duration-200 hover:bg-sidebar-active hover:text-white"
+            className="inline-flex h-10 flex-1 items-center gap-2 rounded-lg px-3 text-sm font-medium text-sidebar-foreground transition-colors duration-150 hover:bg-sidebar-hover hover:text-white"
           >
-            <LogOutIcon size={18} />
+            <LogOutIcon size={17} />
             Log out
           </button>
         </div>
@@ -98,11 +98,11 @@ export default function AdminLayout() {
   return (
     <CentreProvider>
       <div className="min-h-screen bg-background lg:pl-64">
-        <aside className="fixed inset-y-0 left-0 hidden w-64 bg-sidebar lg:block">
+        <aside className="fixed inset-y-0 left-0 hidden w-64 bg-sidebar shadow-lg lg:block">
           <SidebarContent onLogout={logout} />
         </aside>
 
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-sidebar px-4 lg:hidden">
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-sidebar px-4 shadow-sm lg:hidden">
           <Brand />
           <button
             type="button"
@@ -110,7 +110,7 @@ export default function AdminLayout() {
             aria-label="Open navigation"
             aria-expanded={open}
             aria-controls="mobile-nav"
-            className="inline-flex size-10 items-center justify-center rounded-lg text-white transition-colors duration-200 hover:bg-sidebar-active"
+            className="inline-flex size-10 items-center justify-center rounded-lg text-white transition-colors duration-150 hover:bg-sidebar-hover"
           >
             <MenuIcon />
           </button>
@@ -119,12 +119,12 @@ export default function AdminLayout() {
         {open && (
           <div className="fixed inset-0 z-40 lg:hidden">
             <div className="animate-fade-in absolute inset-0 bg-scrim" onClick={() => setOpen(false)} aria-hidden="true" />
-            <aside id="mobile-nav" className="animate-fade-in absolute inset-y-0 left-0 w-72 max-w-[85%] bg-sidebar">
+            <aside id="mobile-nav" className="animate-fade-in absolute inset-y-0 left-0 w-72 max-w-[85%] bg-sidebar shadow-xl">
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close navigation"
-                className="absolute right-3 top-3 inline-flex size-9 items-center justify-center rounded-lg text-sidebar-foreground hover:bg-sidebar-active hover:text-white"
+                className="absolute right-3 top-3 inline-flex size-9 items-center justify-center rounded-lg text-sidebar-foreground hover:bg-sidebar-hover hover:text-white"
               >
                 <XIcon size={18} />
               </button>

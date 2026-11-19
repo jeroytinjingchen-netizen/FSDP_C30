@@ -8,13 +8,13 @@ export const cn = (...parts) => parts.filter(Boolean).join(' ');
 
 // inputClass: the shared Tailwind classes for text inputs and selects.
 export const inputClass =
-  'h-10 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground transition-colors duration-200 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground';
+  'h-10 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground transition-colors duration-150 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground';
 
 // variants: the colour classes for each Button style.
 const variants = {
-  primary: 'bg-accent text-on-accent hover:bg-accent-hover',
-  secondary: 'border border-input bg-card text-foreground hover:bg-muted',
-  danger: 'bg-destructive-solid text-on-destructive hover:opacity-90',
+  primary: 'bg-accent text-on-accent hover:bg-accent-hover shadow-sm',
+  secondary: 'border border-input bg-card text-foreground hover:bg-muted shadow-sm',
+  danger: 'bg-destructive-solid text-on-destructive hover:opacity-90 shadow-sm',
   ghost: 'text-foreground hover:bg-muted',
 };
 
@@ -24,7 +24,7 @@ export function Button({ variant = 'primary', className, type = 'button', ...pro
     <button
       type={type}
       className={cn(
-        'inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50',
+        'inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50',
         variants[variant],
         className
       )}
@@ -79,7 +79,7 @@ export function StatusBadge({ active }) {
     <span
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
-        active ? 'bg-accent-soft text-accent-text' : 'bg-muted text-muted-foreground'
+        active ? 'bg-success-soft text-success-text' : 'bg-muted text-muted-foreground'
       )}
     >
       <span
@@ -94,7 +94,7 @@ export function StatusBadge({ active }) {
 // PageHeader: the page title, optional description, and a slot for buttons or filters (children).
 export function PageHeader({ title, description, children }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
         {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
@@ -107,12 +107,12 @@ export function PageHeader({ title, description, children }) {
 // EmptyState: shown when a list has no rows. "icon: Icon" renames the prop so it can be used as a component.
 export function EmptyState({ icon: Icon, title, hint, action }) {
   return (
-    <div className="flex flex-col items-center gap-3 px-4 py-14 text-center">
-      <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-        <Icon size={24} />
+    <div className="flex flex-col items-center gap-4 px-4 py-16 text-center">
+      <span className="flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+        <Icon size={26} />
       </span>
       <div>
-        <p className="font-medium text-foreground">{title}</p>
+        <p className="font-semibold text-foreground">{title}</p>
         {hint && <p className="mt-1 text-sm text-muted-foreground">{hint}</p>}
       </div>
       {action}

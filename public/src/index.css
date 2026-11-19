@@ -10,20 +10,25 @@
 :root,
 [data-theme='light'] {
   color-scheme: light;
-  --background: #f8fafc;
+  --background: #f1f5f9;
   --foreground: #0f172a;
   --card: #ffffff;
   --muted: #f1f5f9;
-  --muted-foreground: #475569;
+  --muted-foreground: #64748b;
   --border: #e2e8f0;
-  --input-border: #64748b;
-  --ring: #0f172a;
+  --input-border: #94a3b8;
+  --input-border-focus: #b91c1c;
+  --ring: #b91c1c;
 
   --accent: #b91c1c;
   --accent-hover: #991b1b;
   --on-accent: #ffffff;
   --accent-soft: #fee2e2;
   --accent-text: #991b1b;
+
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --success-text: #166534;
 
   --destructive: #b91c1c;
   --destructive-soft: #fee2e2;
@@ -33,10 +38,11 @@
   --warning: #92400e;
   --warning-soft: #fef3c7;
 
-  --sidebar: #991b1b;
-  --sidebar-foreground: #fecaca;
-  --sidebar-active: rgba(255, 255, 255, 0.15);
-  --scrim: rgba(64, 64, 64, 0.55);
+  --sidebar: #7f1d1d;
+  --sidebar-foreground: #fca5a5;
+  --sidebar-active: rgba(255, 255, 255, 0.13);
+  --sidebar-hover: rgba(255, 255, 255, 0.08);
+  --scrim: rgba(15, 23, 42, 0.6);
   --ascii-accent: var(--accent);
   --ascii-skeleton: var(--muted-foreground);
   --ascii-font: var(--font-mono);
@@ -52,12 +58,16 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
   --color-input: var(--input-border);
+  --color-input-focus: var(--input-border-focus);
   --color-ring: var(--ring);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-on-accent: var(--on-accent);
   --color-accent-soft: var(--accent-soft);
   --color-accent-text: var(--accent-text);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-text: var(--success-text);
   --color-destructive: var(--destructive);
   --color-destructive-soft: var(--destructive-soft);
   --color-destructive-solid: var(--destructive-solid);
@@ -67,6 +77,7 @@
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-hover: var(--sidebar-hover);
   --color-scrim: var(--scrim);
 }
 
@@ -85,14 +96,65 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /* Themed caret and selection */
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+  }
+
+  input,
+  textarea,
+  select {
+    caret-color: var(--accent);
+  }
+
+  /* Input focus: border color shift + ring */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+    border-color: var(--input-border-focus);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
 
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+  }
+
   button:not(:disabled),
   select {
     cursor: pointer;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+
+  /* Table row hover */
+  tbody tr {
+    transition: background-color 150ms ease;
+  }
+  tbody tr:hover {
+    background-color: var(--muted);
   }
 }
 
