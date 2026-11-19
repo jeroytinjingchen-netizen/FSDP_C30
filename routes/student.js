@@ -14,5 +14,8 @@ router.get('/packages', student.listPackages);
 router.post('/packages/:id/checkout', student.checkoutPackage);
 router.get('/package', student.getMyPackage);
 router.post('/attendance', student.recordAttendance);
+router.get('/grading-history', student.getGradingHistory);
+router.get('/attendance-history', student.getAttendanceHistory);
+router.get('/schedule', student.getClassSchedule);
 
 module.exports = router;

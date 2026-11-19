@@ -123,13 +123,14 @@ export default function Grading() {
                 <th scope="col" className="px-4 py-3 font-medium">Students</th>
                 <th scope="col" className="px-4 py-3 font-medium">Graded</th>
                 <th scope="col" className="px-4 py-3 font-medium">Not graded</th>
+                <th scope="col" className="px-4 py-3 font-medium">Pending</th>
               </tr>
             </thead>
             <tbody>
-              {loading && <SkeletonRows rows={4} cols={4} />}
+              {loading && <SkeletonRows rows={4} cols={5} />}
               {!loading && sessions.length === 0 && (
                 <tr>
-                  <td colSpan={4}>
+                  <td colSpan={5}>
                     <EmptyState icon={CheckCircleIcon} title="No gradings found" hint="Create a grading, or change the filters." />
                   </td>
                 </tr>
@@ -141,13 +142,16 @@ export default function Grading() {
                     className="cursor-pointer border-t transition-colors duration-200 hover:bg-muted/60"
                     onClick={() => navigate(`/admin/grading/${s.id}`)}
                   >
-                    <td className="px-4 py-3 font-medium text-accent-text">
-                      {formatDate(s.starts_at)}
-                      {s.title ? <span className="ml-2 text-foreground">— {s.title}</span> : null}
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-accent-text">{formatDate(s.starts_at)}</div>
+                      {s.title ? <div className="text-muted-foreground">{s.title}</div> : null}
                     </td>
                     <td className="px-4 py-3 font-mono tabular-nums">{s.student_count}</td>
                     <td className="px-4 py-3 font-mono tabular-nums">{s.graded_count}</td>
                     <td className="px-4 py-3 font-mono tabular-nums">{s.not_graded_count}</td>
+                    <td className="px-4 py-3 font-mono tabular-nums text-muted-foreground">
+                      {s.student_count - s.graded_count - s.not_graded_count}
+                    </td>
                   </tr>
                 ))}
             </tbody>

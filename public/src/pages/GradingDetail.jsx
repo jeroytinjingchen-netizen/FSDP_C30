@@ -149,7 +149,13 @@ export default function GradingDetail() {
       setAlert({ error: false, text: `${result.created} results uploaded.` });
       await load();
     } catch (err) {
-      setUploadErrors(err.message);
+      // The server lists which lines failed; show them so the admin can fix the file.
+      const lines = err.data?.errors;
+      setUploadErrors(
+        lines?.length
+          ? `${err.message}\n${lines.map((e) => `Line ${e.line}: ${e.error}`).join('\n')}`
+          : err.message
+      );
       setAlert({ error: true, text: err.message });
     }
   }
@@ -224,7 +230,7 @@ export default function GradingDetail() {
       </div>
 
       {uploadErrors && (
-        <p className="mb-4 rounded-lg bg-destructive-soft p-3 text-sm text-destructive">{uploadErrors}</p>
+        <p className="mb-4 whitespace-pre-line rounded-lg bg-destructive-soft p-3 text-sm text-destructive">{uploadErrors}</p>
       )}
 
       <div className="overflow-hidden rounded-xl border bg-card">

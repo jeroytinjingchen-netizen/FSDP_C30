@@ -65,7 +65,8 @@ export default function Centres() {
   // const { id, ...body } = form  splits the id from the remaining fields (object rest syntax).
   function save(e) {
     e.preventDefault();
-    const { id, ...body } = form;
+    const { id, name, address, email, phone } = form;
+    const body = { name, address, email, phone };
     setForm(null);
     run(
       () =>

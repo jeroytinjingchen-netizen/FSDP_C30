@@ -1,5 +1,4 @@
 // ui.jsx - small shared building blocks (buttons, fields, toast, modal) used by every page.
-import { AsciiSkeleton } from 'ascii-reveal';
 import { useEffect, useRef, useState } from 'react';
 import { AlertCircleIcon, CheckCircleIcon, XIcon } from './Icons.jsx';
 
@@ -121,12 +120,16 @@ export function EmptyState({ icon: Icon, title, hint, action }) {
 }
 
 // SkeletonRows: placeholder table rows shown while data loads. Array.from builds a rows x cols grid.
+// Each cell gets a pulse-animated bar that looks like a modern loading state.
 export function SkeletonRows({ rows = 4, cols }) {
   return Array.from({ length: rows }, (_, r) => (
     <tr key={r} className="border-t" aria-hidden="true">
       {Array.from({ length: cols }, (_, c) => (
         <td key={c} className="px-4 py-4">
-          <AsciiSkeleton variant="dither" lines={1} seed={r * cols + c} widths={[`${55 + ((r + c) % 3) * 15}%`]} />
+          <div
+            className="h-4 rounded bg-muted animate-pulse"
+            style={{ width: `${55 + ((r + c) % 3) * 15}%` }}
+          />
         </td>
       ))}
     </tr>

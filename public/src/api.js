@@ -31,7 +31,13 @@ export async function api(url, options = {}) {
     },
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Request failed.');
+  if (!res.ok) {
+    const error = new Error(data.error || 'Request failed.');
+    // The full response body, so callers can read extra detail such as per-row upload errors.
+    error.data = data;
+    error.status = res.status;
+    throw error;
+  }
   return data;
 }
 

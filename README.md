@@ -43,9 +43,12 @@ Centralised administrative system for Aikido Shinjukai centres. It covers studen
 
 ## Demo logins
 
+There is one login form. The server returns the account's role and the app sends admins to `/admin/dashboard` and students to `/student`.
+
 - Admin: `admin@as.com` / `Admin@12345`
-- Admin: `sensei@as.com` / `Admin@12345`
+- Admin (second account): `sensei@as.com` / `Admin@12345`
 - Student: `student@gmail.com` / `Student@12345`
+- Sample students: `alice.tan@example.com`, `ben.lim@example.com`, `chloe.ng@example.com`, `daniel.ong@example.com`, `eliza.koh@example.com`, `farid.ismail@example.com`, ... all with `Student@12345`.
 
 ## Stripe webhook (local)
 

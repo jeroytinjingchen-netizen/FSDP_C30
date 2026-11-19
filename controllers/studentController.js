@@ -72,4 +72,31 @@ async function recordAttendance(req, res, next) {
   }
 }
 
-module.exports = { getMe, getMyRank, listPackages, checkoutPackage, getMyPackage, recordAttendance };
+// GET /api/student/grading-history - the student's past gradings.
+async function getGradingHistory(req, res, next) {
+  try {
+    res.json(await portal.getGradingHistory(req.student.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+// GET /api/student/attendance-history - the student's recent attendance records.
+async function getAttendanceHistory(req, res, next) {
+  try {
+    res.json(await portal.getAttendanceHistory(req.student.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+// GET /api/student/schedule - the student's class schedule at their centre.
+async function getClassSchedule(req, res, next) {
+  try {
+    res.json(await portal.getClassSchedule(req.student.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { getMe, getMyRank, listPackages, checkoutPackage, getMyPackage, recordAttendance, getGradingHistory, getAttendanceHistory, getClassSchedule };

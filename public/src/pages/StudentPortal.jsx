@@ -1,11 +1,11 @@
-﻿// StudentPortal.jsx - the minimal student side: current rank, buy a package, record attendance.
-// Payment uses Stripe test-mode checkout. Students do not see invoices, balances or reminders.
+// StudentPortal.jsx - the student side: current rank, buy a package, record attendance,
+// view grading history, attendance history, and class schedule.
 import { useCallback, useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { LogOutIcon } from '../components/Icons.jsx';
-import { formatDate, formatMoney } from '../format.js';
+import { WEEKDAYS, formatDate, formatDateTime, formatMinute, formatMoney } from '../format.js';
 import { Button, Toast } from '../components/ui.jsx';
 
 export default function StudentPortal() {
@@ -14,17 +14,30 @@ export default function StudentPortal() {
   const [rank, setRank] = useState(null);
   const [packages, setPackages] = useState([]);
   const [current, setCurrent] = useState(null); // the student's current package, or null
+  const [gradingHistory, setGradingHistory] = useState([]);
+  const [attendanceHistory, setAttendanceHistory] = useState([]);
+  const [schedule, setSchedule] = useState([]);
   const [busy, setBusy] = useState(null); // id of the package being paid for, or 'attendance'
   const [alert, setAlert] = useState(null);
   const [verified, setVerified] = useState(null); // null while checking, then true or false
 
-  // Loads rank, packages on sale and the current package in parallel.
+  // Loads rank, packages on sale, the current package, grading history, attendance history, and schedule.
   const load = useCallback(async () => {
     try {
-      const [r, list, mine] = await Promise.all([api('/api/student/rank'), api('/api/student/packages'), api('/api/student/package')]);
+      const [r, list, mine, gh, ah, sch] = await Promise.all([
+        api('/api/student/rank'),
+        api('/api/student/packages'),
+        api('/api/student/package'),
+        api('/api/student/grading-history'),
+        api('/api/student/attendance-history'),
+        api('/api/student/schedule'),
+      ]);
       setRank(r);
       setPackages(list);
       setCurrent(mine.package);
+      setGradingHistory(gh);
+      setAttendanceHistory(ah);
+      setSchedule(sch);
     } catch (err) {
       setAlert({ error: true, text: err.message });
     }
@@ -79,6 +92,7 @@ export default function StudentPortal() {
       const data = await api('/api/student/attendance', { method: 'POST' });
       setCurrent(data.package);
       setAlert({ error: false, text: 'Attendance recorded.' });
+      api('/api/student/attendance-history').then(setAttendanceHistory).catch(() => {});
     } catch (err) {
       setAlert({ error: true, text: err.message });
     } finally {
@@ -143,7 +157,7 @@ export default function StudentPortal() {
                 <div>
                   <p className="font-medium">{p.name}</p>
                   <p className="text-sm text-muted-foreground">
-                    {p.sessions_total} sessions, valid for {p.validity_weeks} weeks
+                    {p.sessions_total} {p.sessions_total === 1 ? 'session' : 'sessions'}, valid for {p.validity_weeks} weeks
                   </p>
                 </div>
                 <Button onClick={() => buy(p)} disabled={busy === p.id}>
@@ -153,6 +167,68 @@ export default function StudentPortal() {
             ))}
             {packages.length === 0 && <li className="py-3 text-sm text-muted-foreground">No packages are on sale.</li>}
           </ul>
+        </section>
+
+        <section className="rounded-xl border bg-card p-5">
+          <h2 className="text-base font-semibold">Grading history</h2>
+          {gradingHistory.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">No gradings recorded yet.</p>
+          ) : (
+            <ul className="mt-3 divide-y">
+              {gradingHistory.map((g, i) => (
+                <li key={i} className="flex items-center justify-between gap-3 py-3">
+                  <div>
+                    <p className="font-medium">{g.rank_name || 'General grading'}</p>
+                    <p className="text-sm text-muted-foreground">{g.title || 'Grading session'} | {formatDate(g.starts_at)}</p>
+                  </div>
+                  <span
+                    className={`text-sm font-medium ${
+                      g.result === 'PASS' ? 'text-accent-text' : g.result === 'NOT PASSED' ? 'text-destructive' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {g.result || 'Pending'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="rounded-xl border bg-card p-5">
+          <h2 className="text-base font-semibold">Class schedule</h2>
+          {schedule.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">No classes scheduled at your centre.</p>
+          ) : (
+            <ul className="mt-3 divide-y">
+              {schedule.map((c, i) => (
+                <li key={i} className="flex items-center justify-between gap-3 py-3">
+                  <div>
+                    <p className="font-medium">{c.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {WEEKDAYS[c.weekday]} {formatMinute(c.start_minute)} - {formatMinute(c.end_minute)}
+                    </p>
+                  </div>
+                  <span className="text-sm text-muted-foreground">{c.instructor_name || 'Unassigned'}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="rounded-xl border bg-card p-5">
+          <h2 className="text-base font-semibold">Attendance history</h2>
+          {attendanceHistory.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">No attendance recorded yet.</p>
+          ) : (
+            <ul className="mt-3 divide-y">
+              {attendanceHistory.map((a, i) => (
+                <li key={i} className="flex items-center justify-between gap-3 py-3">
+                  <span className="font-medium">{formatDate(a.attended_on)}</span>
+                  <span className="text-sm text-muted-foreground">{a.package_name || 'Package'}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </main>
 

@@ -1,4 +1,5 @@
-﻿// Login.jsx - the login page. Admins and students share one form; the tab chosen must match the account's role.
+﻿// Login.jsx - one login form for everyone. The server says what the account is (ADMIN or STUDENT)
+// and the page sends the user to the matching portal, so there is no portal to pick.
 // useState holds the form values; useNavigate moves to another page after a successful login.
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
@@ -7,15 +8,12 @@ import { useAuth } from '../AuthContext.jsx';
 import { AlertCircleIcon, CheckCircleIcon, EyeIcon, EyeOffIcon, LogoMark } from '../components/Icons.jsx';
 import { Button, Field, cn, inputClass } from '../components/ui.jsx';
 
-const ROLES = [
-  { value: 'ADMIN', label: 'Admin portal' },
-  { value: 'STUDENT', label: 'Student portal' },
-];
+// Where each role lands after signing in.
+const HOME = { ADMIN: '/admin/dashboard', STUDENT: '/student' };
 
 export default function Login() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
-  const [role, setRole] = useState('ADMIN');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -24,11 +22,6 @@ export default function Login() {
 
   if (user?.role === 'ADMIN') return <Navigate to="/admin/dashboard" replace />;
   if (user?.role === 'STUDENT') return <Navigate to="/student" replace />;
-
-  const switchRole = (r) => {
-    setRole(r);
-    setAlert(null);
-  };
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -39,15 +32,8 @@ export default function Login() {
         method: 'POST',
         body: JSON.stringify({ email: email.trim(), password: password.trim() }),
       });
-      if (data.role !== role) {
-        setAlert({ error: true, text: `Access denied. This account is registered as a ${data.role}. Please switch tabs.` });
-      } else if (data.role === 'ADMIN') {
-        login(data.user);
-        navigate('/admin/dashboard');
-      } else {
-        login(data.user);
-        navigate('/student');
-      }
+      login(data.user);
+      navigate(HOME[data.role] || '/');
     } catch (err) {
       setAlert({ error: true, text: err.message });
     } finally {
@@ -106,28 +92,9 @@ export default function Login() {
           </div>
 
           <h2 className="text-2xl font-semibold tracking-tight">Sign in</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Choose your portal and enter your credentials.</p>
-
-          {/* Portal tabs */}
-          <div role="tablist" aria-label="Portal" className="mt-6 flex rounded-lg bg-muted p-1 gap-1">
-            {ROLES.map((r) => (
-              <button
-                key={r.value}
-                type="button"
-                role="tab"
-                aria-selected={role === r.value}
-                onClick={() => switchRole(r.value)}
-                className={cn(
-                  'h-9 flex-1 rounded-md text-sm font-medium transition-all duration-150',
-                  role === r.value
-                    ? 'bg-card text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Enter your credentials. We will take you to the right portal automatically.
+          </p>
 
           {/* Alert */}
           {alert && (
@@ -152,7 +119,7 @@ export default function Login() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={role === 'ADMIN' ? 'admin@as.com' : 'student@gmail.com'}
+                placeholder="you@example.com"
                 className={inputClass}
               />
             </Field>
