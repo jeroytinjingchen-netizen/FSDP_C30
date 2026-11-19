@@ -559,18 +559,22 @@ async function main() {
         const s = candidates[ci];
         const gradedFor = nextRankId(s.rank) || rankId[s.rank];
         const outcome = isPast ? (ci % 6 === 0 ? 'NOT_GRADED' : 'GRADED') : null;
+        // The target rank and examiner are part of the session plan, so every candidate has them
+        // from the moment they are entered. Only the result itself waits for the session to happen.
         await client.query(
           `INSERT INTO grading_candidates
              (grading_session_id, student_id, from_rank_id, graded_for_rank_id, instructor_id,
               outcome, remarks, result_recorded_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           ON CONFLICT (grading_session_id, student_id) DO NOTHING`,
+           ON CONFLICT (grading_session_id, student_id) DO UPDATE
+             SET graded_for_rank_id = COALESCE(grading_candidates.graded_for_rank_id, EXCLUDED.graded_for_rank_id),
+                 instructor_id       = COALESCE(grading_candidates.instructor_id, EXCLUDED.instructor_id)`,
           [
             gradingId,
             studentId[s.email],
             rankId[s.rank],
-            isPast ? gradedFor : null,
-            isPast ? instructorId[examinerName] : null,
+            gradedFor,
+            instructorId[examinerName],
             outcome,
             isPast ? (outcome === 'GRADED' ? 'Good technique, passed.' : 'Needs more practice on ukemi.') : null,
             isPast ? g.starts : null,
