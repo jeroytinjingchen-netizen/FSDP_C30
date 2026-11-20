@@ -1,6 +1,7 @@
 # FSDP_C30
 
 Centralised administrative system for Aikido Shinjukai centres. It covers students, instructors, classes, terms, grading, fees, Stripe payments, email notifications and financial reports.
+//i am smart and strong
 
 ## Stack
 
