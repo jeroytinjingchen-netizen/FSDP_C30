@@ -144,7 +144,7 @@ export default function StudentPortal() {
               </Button>
             </div>
           ) : (
-            <p className="mt-2 text-sm text-muted-foreground">You have no package yet. Buy one below.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Buy your first package below to start training.</p>
           )}
         </section>
 
@@ -224,7 +224,7 @@ export default function StudentPortal() {
               {attendanceHistory.map((a, i) => (
                 <li key={i} className="flex items-center justify-between gap-3 py-3">
                   <span className="font-medium">{formatDate(a.attended_on)}</span>
-                  <span className="text-sm text-muted-foreground">{a.package_name || 'Package'}</span>
+                  <span className="text-sm text-muted-foreground">{a.package_name}</span>
                 </li>
               ))}
             </ul>

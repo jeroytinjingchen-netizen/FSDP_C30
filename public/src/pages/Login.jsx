@@ -45,27 +45,45 @@ export default function Login() {
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      <aside className="hidden flex-col justify-between bg-sidebar p-12 text-white lg:flex">
-        <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-lg bg-accent text-on-accent">
+      {/* Left panel */}
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-sidebar p-12 text-white lg:flex">
+        {/* Subtle radial decoration */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-32 -right-32 size-[480px] rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%)' }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-24 -left-24 size-[360px] rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)' }}
+        />
+
+        {/* Logo */}
+        <div className="relative flex items-center gap-3">
+          <span className="flex size-11 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm ring-1 ring-white/20">
             <LogoMark size={24} />
           </span>
-          <span className="text-lg font-semibold">Aikido Shinjukai</span>
+          <span className="text-lg font-semibold tracking-tight">Aikido Shinjukai</span>
         </div>
-        <div>
-          <h1 className="max-w-md text-4xl font-semibold leading-tight tracking-tight">
+
+        {/* Hero text */}
+        <div className="relative">
+          <h1 className="max-w-xs text-4xl font-semibold leading-tight tracking-tight">
             One place to run every centre.
           </h1>
-          <p className="mt-4 max-w-md text-sidebar-foreground">
-            Centralised administrative workflow for centres, venues and students.
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/70">
+            Centralised administrative workflow for centres, venues and students across all locations.
           </p>
         </div>
-        <p className="text-xs text-sidebar-foreground">&copy; 2026 Aikido Shinjukai</p>
+
+        <p className="relative text-xs text-white/40">&copy; 2026 Aikido Shinjukai</p>
       </aside>
 
-      <main className="relative flex items-center justify-center p-6 sm:p-12">
-
+      {/* Right panel */}
+      <main className="flex items-center justify-center bg-background p-6 sm:p-12">
         <div className="w-full max-w-sm">
+          {/* Mobile logo */}
           <div className="mb-8 flex items-center gap-3 lg:hidden">
             <span className="flex size-10 items-center justify-center rounded-lg bg-accent text-on-accent">
               <LogoMark size={24} />
@@ -78,6 +96,7 @@ export default function Login() {
             Enter your credentials. We will take you to the right portal automatically.
           </p>
 
+          {/* Alert */}
           {alert && (
             <div
               role={alert.error ? 'alert' : 'status'}
@@ -120,14 +139,14 @@ export default function Login() {
                   onClick={() => setShowPassword((s) => !s)}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                   aria-pressed={showPassword}
-                  className="absolute right-1 top-1 inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-200 hover:text-foreground"
+                  className="absolute right-1 top-1 inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:text-foreground"
                 >
                   {showPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
                 </button>
               </div>
             </Field>
-            <Button type="submit" disabled={busy} className="w-full">
-              {busy ? 'Signing in...' : 'Sign in'}
+            <Button type="submit" disabled={busy} className="w-full mt-2">
+              {busy ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
         </div>

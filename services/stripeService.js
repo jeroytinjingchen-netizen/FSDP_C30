@@ -77,7 +77,7 @@ async function recordSuccessfulPayment(client, session) {
 }
 
 // Writes a Failed payment so the admin can explain why a package did not start.
-// A Failed payment does not create a package.
+// A Failed payment never activates a package, but it still names the package the student tried to buy.
 async function recordFailedPayment(client, session) {
   const { student_id: studentId, package_id: packageId } = session.metadata || {};
   if (!studentId || !packageId) return;

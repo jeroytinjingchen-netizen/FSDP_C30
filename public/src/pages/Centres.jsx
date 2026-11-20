@@ -121,7 +121,7 @@ export default function Centres() {
         </Button>
       </PageHeader>
 
-      <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <caption className="sr-only">Training centres</caption>

@@ -171,12 +171,21 @@ export const EyeOffIcon = make(
   </>
 );
 
+export const LogoMark = make(
+  <>
+    <path d="M12 3a9 9 0 1 0 9 9" />
+    <circle cx="19" cy="5" r="1.6" fill="currentColor" stroke="none" />
+    <path d="M8.5 15.5 12 8l3.5 7.5" />
+    <path d="M9.9 13h4.2" />
+  </>
+);
+
 export const LayoutDashboardIcon = make(
   <>
-    <rect x="3" y="3" width="7" height="7" rx="1" />
-    <rect x="14" y="3" width="7" height="7" rx="1" />
-    <rect x="3" y="14" width="7" height="7" rx="1" />
-    <rect x="14" y="14" width="7" height="7" rx="1" />
+    <rect x="3" y="3" width="7" height="9" rx="1" />
+    <rect x="14" y="3" width="7" height="5" rx="1" />
+    <rect x="14" y="12" width="7" height="9" rx="1" />
+    <rect x="3" y="16" width="7" height="5" rx="1" />
   </>
 );
 
@@ -189,26 +198,23 @@ export const UsersIcon = make(
   </>
 );
 
-export const GraduationCapIcon = make(
+export const AwardIcon = make(
   <>
-    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-    <path d="M6 12v5c3 3 9 3 12 0v-5" />
+    <circle cx="12" cy="8" r="6" />
+    <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
   </>
 );
 
-export const WalletIcon = make(
+export const CreditCardIcon = make(
   <>
-    <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" />
-    <path d="M4 6v12c0 1.1.9 2 2 2h14v-4" />
-    <path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z" />
+    <rect x="2" y="5" width="20" height="14" rx="2" />
+    <path d="M2 10h20" />
   </>
 );
 
-export const LogoMark = make(
+export const UserIcon = make(
   <>
-    <path d="M12 3a9 9 0 1 0 9 9" />
-    <circle cx="19" cy="5" r="1.6" fill="currentColor" stroke="none" />
-    <path d="M8.5 15.5 12 8l3.5 7.5" />
-    <path d="M9.9 13h4.2" />
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
   </>
 );

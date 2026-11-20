@@ -37,7 +37,8 @@ Centralised administrative system for Aikido Shinjukai centres. It covers studen
 | `npm run dev` | Starts the API (nodemon) and the Vite client. |
 | `npm run appStart` | Starts only the API. |
 | `npm run client:build` | Builds the client. |
-| `npm run seed` | Creates demo centres, an admin login and a student login. |
+| `npm run seed` | Loads all demo data (centres, classes, instructors, students, payments, gradings). Safe to re-run. |
+| `npm run migrate` | Applies pending files in `migrations/` once each, tracked in `schema_migrations`. |
 | `npm test` | Runs unit tests in `tests/` with the built-in Node test runner. |
 
 ## Demo logins
@@ -48,8 +49,6 @@ There is one login form. The server returns the account's role and the app sends
 - Admin (second account): `sensei@as.com` / `Admin@12345`
 - Student: `student@gmail.com` / `Student@12345`
 - Sample students: `alice.tan@example.com`, `ben.lim@example.com`, `chloe.ng@example.com`, `daniel.ong@example.com`, `eliza.koh@example.com`, `farid.ismail@example.com`, ... all with `Student@12345`.
-
-`npm run seed` also creates `admin@aikidoshinjukai.com` / `Admin@12345`, so that address works after seeding.
 
 ## Stripe webhook (local)
 
@@ -71,7 +70,8 @@ Copy the `whsec_` value it prints into `STRIPE_WEBHOOK_SECRET`. The value change
 - `services/`: Stripe, email and reminder logic.
 - `middlewares/`: session cookies, admin checks and centre filters.
 - `public/`: React client (`src/pages`, `src/components`).
-- `scripts/seed.js`: demo data.
+- `scripts/seed.js`: all demo data, inlined in one file.
+- `scripts/migrate.js`: applies `migrations/*.sql` in order.
 - `tests/`: unit tests.
 - `FullStackDatabase.sql`: schema source of truth.
 

@@ -87,15 +87,15 @@ export default function Grading() {
         </Button>
       </PageHeader>
 
-      <section aria-label="Grading filters" className="mb-6 rounded-xl border bg-card p-4">
+      <section aria-label="Grading filters" className="mb-6 rounded-xl border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-end gap-3">
           <RankSelect ranks={ranks} value={rankFilter} onChange={setRankFilter} className="w-64" />
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-muted-foreground">From date</span>
+            <span className="font-medium text-foreground">From date</span>
             <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={inputClass} />
           </label>
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-muted-foreground">To date</span>
+            <span className="font-medium text-foreground">To date</span>
             <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={inputClass} />
           </label>
           {(rankFilter || from || to) && (
@@ -106,7 +106,7 @@ export default function Grading() {
         </div>
       </section>
 
-      <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <caption className="sr-only">Gradings</caption>

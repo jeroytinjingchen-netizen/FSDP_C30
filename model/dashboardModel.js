@@ -55,14 +55,14 @@ async function upcomingGradings(centreId, limit) {
 
 // The latest payments, newest first. Failed ones are included so admins can see them.
 // A payment with no paid date (pending or failed) is placed by when it was created instead.
+// Every payment belongs to a package.
 async function recentPayments(centreId, limit) {
   const { rows } = await pool.query(
     `SELECT p.id, p.amount_cents, p.paid_at, p.status, p.reference,
-            s.first_name, s.last_name, COALESCE(sp.name, pk.name) AS package_name
+            s.first_name, s.last_name, pk.name AS package_name
        FROM payments p
        JOIN students s ON s.id = p.student_id
-       LEFT JOIN student_packages sp ON sp.payment_id = p.id
-       LEFT JOIN packages pk ON pk.id = p.package_id
+       JOIN packages pk ON pk.id = p.package_id
       WHERE ($1::uuid IS NULL OR s.centre_id = $1)
       ORDER BY COALESCE(p.paid_at, p.created_at) DESC
       LIMIT $2`,

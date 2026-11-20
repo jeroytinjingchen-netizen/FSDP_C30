@@ -122,7 +122,7 @@ export default function GradingDetail() {
           method: rid ? 'PUT' : 'POST',
           body: JSON.stringify(body),
         }),
-      "Result saved. Use \"Update rank\" on that row to change the student's rank."
+      'Result saved.'
     );
   }
 
@@ -269,12 +269,6 @@ export default function GradingDetail() {
                   <td className="px-4 py-3 text-muted-foreground">{r.instructor_name || '-'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
-                      <Link
-                        to={`/admin/students?student=${r.student_id}`}
-                        className="text-xs font-medium text-accent-text hover:underline"
-                      >
-                        Update rank
-                      </Link>
                       <IconButton
                         label={`Edit result for ${r.first_name} ${r.last_name}`}
                         onClick={() =>
