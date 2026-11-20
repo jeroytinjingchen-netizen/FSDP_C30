@@ -37,6 +37,17 @@ export const XIcon = make(
   </>
 );
 
+export const CheckIcon = make(<path d="M20 6 9 17l-5-5" />);
+
+export const ChevronDownIcon = make(<path d="m6 9 6 6 6-6" />);
+
+export const SearchIcon = make(
+  <>
+    <circle cx="11" cy="11" r="7" />
+    <path d="m20 20-3.5-3.5" />
+  </>
+);
+
 export const MenuIcon = make(
   <>
     <path d="M4 12h16" />

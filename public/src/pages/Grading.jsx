@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { CheckCircleIcon, PlusIcon } from '../components/Icons.jsx';
+import RankSelect from '../components/RankSelect.jsx';
 import { formatDate } from '../format.js';
 import {
   Button,
@@ -88,15 +89,7 @@ export default function Grading() {
 
       <section aria-label="Grading filters" className="mb-6 rounded-xl border bg-card p-4">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-muted-foreground">Rank</span>
-            <select aria-label="Filter by rank" value={rankFilter} onChange={(e) => setRankFilter(e.target.value)} className={inputClass}>
-              <option value="">All ranks</option>
-              {ranks.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
-            </select>
-          </label>
+          <RankSelect ranks={ranks} value={rankFilter} onChange={setRankFilter} className="w-64" />
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="font-medium text-muted-foreground">From date</span>
             <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={inputClass} />

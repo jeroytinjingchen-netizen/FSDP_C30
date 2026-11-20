@@ -1,4 +1,4 @@
-﻿// Students.jsx - admin page to list, search, add and edit students, and open a student's profile (AS-7, AS-8, AS-9, AS-11, AS-12).
+// Students.jsx - admin page to list, search, add and edit students, and open a student's profile (AS-7, AS-8, AS-9, AS-11, AS-12).
 // The profile shows contact details, rank and rank history, the active package with sessions used and
 // remaining, payment history, and grading history. Payment and grading records are read-only here.
 // Ranks never change automatically: the admin changes one with the "Update rank" form on the profile.
@@ -7,6 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useCentre } from '../CentreContext.jsx';
 import CentreSwitcher from '../components/CentreSwitcher.jsx';
+import RankSelect from '../components/RankSelect.jsx';
 import { ArchiveIcon, CalendarIcon, PencilIcon, PlusIcon, RestoreIcon } from '../components/Icons.jsx';
 import { formatDate, formatDateTime, formatMoney } from '../format.js';
 import {
@@ -244,14 +245,7 @@ export default function Students() {
           className={inputClass}
         />
         <CentreSwitcher />
-        <select aria-label="Filter by rank" value={rankFilter} onChange={(e) => setRankFilter(e.target.value)} className={inputClass}>
-          <option value="">All ranks</option>
-          {ranks.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-            </option>
-          ))}
-        </select>
+        <RankSelect ranks={ranks} value={rankFilter} onChange={setRankFilter} label={null} />
       </section>
 
       <div className="overflow-hidden rounded-xl border bg-card">
