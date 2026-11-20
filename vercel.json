@@ -1,14 +1,12 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
-  "outputDirectory": "public/dist",
   "functions": {
     "app.js": {
       "includeFiles": "public/dist/**"
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/app.js" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/app.js" }
   ]
 }
