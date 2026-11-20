@@ -80,5 +80,5 @@ Copy the `whsec_` value it prints into `STRIPE_WEBHOOK_SECRET`. The value change
 
 `npm test` covers the pure report helpers: date bounds for the financial report and CSV cell escaping. Database and Stripe flows were checked by hand against a running server.
 
-
+rr
 asdj
