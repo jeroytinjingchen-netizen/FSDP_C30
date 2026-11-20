@@ -43,7 +43,12 @@ app.use('/api/student', studentRoutes);
 app.use('/api/students', adminStudentRoutes);
 
 // Serve the built React app (public/dist) and fall back to index.html for client-side routes.
-
+const clientDist = path.join(__dirname, 'public', 'dist');
+app.use(express.static(clientDist));
+app.use((req, res, next) => {
+  if (req.method !== 'GET' || req.path.startsWith('/api/')) return next();
+  res.sendFile(path.join(clientDist, 'index.html'), (err) => err && next());
+});
 
 // Export for Vercel serverless
 module.exports = app;
