@@ -1,11 +1,13 @@
 ﻿// Dashboard.jsx - the admin landing page (AS-2).
-// Shows summary cards (students, active centres, upcoming gradings, collected this month) and short lists
-// of upcoming gradings and recent payments. The centre switcher filters every figure.
+// Shows summary cards (students, active centres, upcoming gradings, collected this month), a revenue
+// breakdown donut (by package, or by centre when all centres are shown), and short lists of upcoming
+// gradings and recent payments. The centre switcher filters every figure.
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useCentre } from '../CentreContext.jsx';
 import CentreSwitcher from '../components/CentreSwitcher.jsx';
+import RevenuePie from '../components/RevenuePie.jsx';
 import { AwardIcon, BuildingIcon, CreditCardIcon, UsersIcon } from '../components/Icons.jsx';
 import { formatDate, formatDateTime, formatMoney } from '../format.js';
 import { PageHeader, Toast } from '../components/ui.jsx';
@@ -101,6 +103,15 @@ export default function Dashboard() {
             }
           />
         ))}
+      </div>
+
+      <div className="mt-6">
+        <RevenuePie
+          byPackage={data?.revenue?.byPackage}
+          byCentre={data?.revenue?.byCentre}
+          loading={loading}
+          error={error}
+        />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">

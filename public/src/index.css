@@ -43,6 +43,14 @@
   --sidebar-active: rgba(255, 255, 255, 0.13);
   --sidebar-hover: rgba(255, 255, 255, 0.08);
   --scrim: rgba(15, 23, 42, 0.6);
+  /* Chart series: categorical, fixed order, validated for colour-blind separation */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-other: #94a3b8;
   --ascii-accent: var(--accent);
   --ascii-skeleton: var(--muted-foreground);
   --ascii-font: var(--font-mono);
@@ -78,6 +86,13 @@
   --sidebar-foreground: #fecaca;
   --sidebar-active: rgba(255, 255, 255, 0.15);
   --scrim: rgba(0, 0, 0, 0.65);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #0ca30c;
+  --series-other: #64748b;
   --ascii-accent: var(--accent);
   --ascii-skeleton: var(--muted-foreground);
   --ascii-font: var(--font-mono);
@@ -114,6 +129,13 @@
     --sidebar-foreground: #fecaca;
     --sidebar-active: rgba(255, 255, 255, 0.15);
     --scrim: rgba(0, 0, 0, 0.65);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #0ca30c;
+    --series-other: #64748b;
   }
 }
 

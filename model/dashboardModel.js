@@ -71,4 +71,37 @@ async function recentPayments(centreId, limit) {
   return rows;
 }
 
-module.exports = { summary, upcomingGradings, recentPayments };
+// Revenue split for the dashboard pie chart: Successful (COMPLETED) payments grouped by package or
+// by centre. Each row carries two totals so the page can switch period without another request:
+//  - month_cents: paid in the current Singapore month (same rule as the "Collected this month" card)
+//  - all_cents:   all time
+// SUM(...) FILTER (WHERE ...) adds up only the rows matching the condition, inside the same GROUP BY.
+// groupBy is chosen from a fixed whitelist, never from user text, so it is safe to put into the SQL.
+const REVENUE_GROUPS = {
+  package: { id: 'pk.id', label: 'pk.name' },
+  centre: { id: 'c.id', label: 'c.name' },
+};
+
+async function revenueBreakdown(centreId, groupBy) {
+  const group = REVENUE_GROUPS[groupBy];
+  if (!group) throw new Error(`Unknown revenue grouping: ${groupBy}`);
+  const { rows } = await pool.query(
+    `SELECT ${group.id} AS id, ${group.label} AS label,
+            COALESCE(SUM(p.amount_cents) FILTER (
+              WHERE date_trunc('month', p.paid_at AT TIME ZONE 'Asia/Singapore')
+                  = date_trunc('month', now() AT TIME ZONE 'Asia/Singapore')), 0)::int AS month_cents,
+            COALESCE(SUM(p.amount_cents), 0)::int AS all_cents
+       FROM payments p
+       JOIN students s ON s.id = p.student_id
+       JOIN centres c ON c.id = s.centre_id
+       JOIN packages pk ON pk.id = p.package_id
+      WHERE p.status = 'COMPLETED'
+        AND ($1::uuid IS NULL OR s.centre_id = $1)
+      GROUP BY ${group.id}, ${group.label}
+      ORDER BY all_cents DESC`,
+    [centreId]
+  );
+  return rows;
+}
+
+module.exports = { summary, upcomingGradings, recentPayments, revenueBreakdown };
